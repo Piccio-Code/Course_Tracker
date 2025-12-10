@@ -21,7 +21,7 @@ func main() {
 	errorLog := log.New(os.Stderr, "ERROR: \t", log.Ltime|log.Llongfile)
 	infoLog := log.New(os.Stdout, "INFO: \t", log.Ltime)
 
-	err := godotenv.Load("app/backend/.env")
+	err := godotenv.Load("app/.env")
 
 	if err != nil {
 		errorLog.Fatal(err)

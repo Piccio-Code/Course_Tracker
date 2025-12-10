@@ -10,11 +10,22 @@ import (
 	_ "github.com/microsoftgraph/msgraph-sdk-go"
 	"github.com/microsoftgraph/msgraph-sdk-go/models"
 	graphshares "github.com/microsoftgraph/msgraph-sdk-go/shares"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
 )
+
+type Course struct {
+	Name     string
+	Duration int
+	Parts    []CoursePart
+}
+
+type CoursePart struct {
+	Name     string
+	Duration int
+	Files    []CourseFile
+}
 
 type CourseFile struct {
 	Name     string
@@ -33,7 +44,7 @@ type Onedrive struct {
 }
 
 func NewOnedrive() (o *Onedrive, err error) {
-	err = godotenv.Load("app/backend/.env")
+	err = godotenv.Load("app/.env")
 
 	if err != nil {
 		return nil, err
@@ -65,7 +76,9 @@ func NewOnedrive() (o *Onedrive, err error) {
 		return nil, err
 	}
 
-	graphClient.Me().Get(context.Background(), nil)
+	if _, err = graphClient.Me().Get(context.Background(), nil); err != nil {
+		return nil, err
+	}
 
 	return &Onedrive{graphClient: graphClient}, nil
 }
@@ -78,7 +91,7 @@ func (o *Onedrive) NewCourse(sharedFolderUrl string) (*Course, error) {
 		return nil, err
 	}
 
-	courseFiles, err := o.GetCourseFiles(driveItem.GetChildren())
+	courseParts, totalDuarion, err := o.GetCourseParts(driveItem.GetChildren())
 
 	if err != nil {
 		return nil, err
@@ -90,7 +103,7 @@ func (o *Onedrive) NewCourse(sharedFolderUrl string) (*Course, error) {
 		return nil, err
 	}
 
-	course := &Course{Name: name, Files: courseFiles}
+	course := &Course{Name: name, Parts: courseParts, Duration: totalDuarion}
 
 	return course, nil
 }
@@ -122,16 +135,14 @@ func (o *Onedrive) GetDriveItems(sharedFolderUrl string) (driveItem models.Drive
 	return driveItem, nil
 }
 
-func (o *Onedrive) GetFilesFromFolder(folder models.DriveItemable) ([]CourseFile, error) {
+func (o *Onedrive) GetFilesFromFolder(folder models.DriveItemable) (courseFiles []CourseFile, totalDuration int, err error) {
 	filesItem, err := o.GetDriveItems(*folder.GetWebUrl())
 
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
 	files := filesItem.GetChildren()
-
-	filesList := make([]CourseFile, 0, len(files))
 
 	for _, file := range files {
 		fileName := *file.GetName()
@@ -147,34 +158,32 @@ func (o *Onedrive) GetFilesFromFolder(folder models.DriveItemable) ([]CourseFile
 
 		if isVideo {
 			duration = int(*file.GetVideo().GetDuration())
+			totalDuration += duration
 		}
 
-		filesList = append(filesList, CourseFile{Name: fileName, URL: url, Format: format, Duration: duration})
+		courseFiles = append(courseFiles, CourseFile{Name: fileName, URL: url, Format: format, Duration: duration})
 	}
 
-	return filesList, nil
+	return courseFiles, totalDuration, nil
 }
 
-func (o *Onedrive) GetCourseFiles(folders []models.DriveItemable) (map[string][]CourseFile, error) {
-
-	courseFiles := make(map[string][]CourseFile)
+func (o *Onedrive) GetCourseParts(folders []models.DriveItemable) (courseParts []CoursePart, totalDuration int, err error) {
 
 	for _, folder := range folders {
+		PartName := *folder.GetName()
 
-		folderName := *folder.GetName()
-
-		log.Printf("Folder name %s\n", folderName)
-
-		files, err := o.GetFilesFromFolder(folder)
+		files, partDuration, err := o.GetFilesFromFolder(folder)
 
 		if err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 
-		courseFiles[folderName] = files
+		totalDuration += partDuration
+
+		courseParts = append(courseParts, CoursePart{Name: PartName, Files: files, Duration: partDuration})
 	}
 
-	return courseFiles, nil
+	return courseParts, totalDuration, nil
 }
 
 func (o *Onedrive) GetFolders(sharedFolderUrl string) (courseFolders []CourseFolder, err error) {
