@@ -6,43 +6,33 @@ import (
 	"net/http"
 )
 
-type CoursesFolder struct {
-	OnedriveURL string `form:"url"`
+type CourseForm struct {
+	URL string `form:"url"`
 }
 
-func (app *Application) GetCoursesInFolder(w http.ResponseWriter, r *http.Request) {
+func (app *Application) CreateCourse(w http.ResponseWriter, r *http.Request) {
 	decoder := form.NewDecoder(r.Body)
 
-	var coursesFolder CoursesFolder
+	var courseForm CourseForm
 
-	if err := decoder.Decode(&coursesFolder); err != nil {
+	if err := decoder.Decode(&courseForm); err != nil {
 		app.ErrorLog.Println(err)
-		http.Error(w, "Form could not be decoded", http.StatusBadRequest)
-		return
+		http.Error(w, "Error deconding the body", http.StatusBadRequest)
 	}
 
-	app.InfoLog.Println(coursesFolder)
-
-	folders, err := app.Onedrive.GetFolders(coursesFolder.OnedriveURL)
+	course, err := app.Onedrive.NewCourse(courseForm.URL)
 
 	if err != nil {
 		app.ErrorLog.Println(err)
-		http.Error(w, fmt.Sprintf("Invalid URL %s", coursesFolder.OnedriveURL), http.StatusBadRequest)
-		return
+		http.Error(w, "Error getting the course from Onedrive API", http.StatusBadRequest)
 	}
 
-	fmt.Fprintf(w, "The folders are : %v", folders)
-}
+	insertCourse, err := app.courseModel.InsertCourse(*course)
 
-func (app *Application) AddCourseFolder(w http.ResponseWriter, r *http.Request) {
-	decoder := form.NewDecoder(r.Body)
-
-	var coursesFolder CoursesFolder
-
-	if err := decoder.Decode(&coursesFolder); err != nil {
-		http.Error(w, "Form could not be decoded", http.StatusBadRequest)
-		return
+	if err != nil {
+		app.ErrorLog.Println(err)
+		http.Error(w, "Error inserting the course", http.StatusBadRequest)
 	}
 
-	fmt.Fprintf(w, "Decoded: %#v", coursesFolder)
+	fmt.Fprintf(w, "%v", insertCourse)
 }

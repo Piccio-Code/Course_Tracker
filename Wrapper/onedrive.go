@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
+	. "github.com/Piccio-Code/Course_Tracker/app/models"
 	"github.com/joho/godotenv"
 	. "github.com/microsoftgraph/msgraph-sdk-go"
 	_ "github.com/microsoftgraph/msgraph-sdk-go"
@@ -14,30 +15,6 @@ import (
 	"path/filepath"
 	"strings"
 )
-
-type Course struct {
-	Name     string
-	Duration int
-	Parts    []CoursePart
-}
-
-type CoursePart struct {
-	Name     string
-	Duration int
-	Files    []CourseFile
-}
-
-type CourseFile struct {
-	Name     string
-	URL      string
-	Format   string
-	Duration int
-}
-
-type CourseFolder struct {
-	Name string
-	URL  string
-}
 
 type Onedrive struct {
 	graphClient *GraphServiceClient

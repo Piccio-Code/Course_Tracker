@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	. "github.com/Piccio-Code/Course_Tracker/Wrapper"
+	. "github.com/Piccio-Code/Course_Tracker/app/models"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
 	"log"
@@ -11,10 +12,10 @@ import (
 )
 
 type Application struct {
-	Onedrive *Onedrive
-	ErrorLog *log.Logger
-	InfoLog  *log.Logger
-	DB       *pgxpool.Pool
+	Onedrive    *Onedrive
+	ErrorLog    *log.Logger
+	InfoLog     *log.Logger
+	courseModel *CourseModel
 }
 
 func main() {
@@ -40,10 +41,10 @@ func main() {
 	}
 
 	app := Application{
-		Onedrive: onedrive,
-		ErrorLog: errorLog,
-		InfoLog:  infoLog,
-		DB:       dbPool,
+		Onedrive:    onedrive,
+		ErrorLog:    errorLog,
+		InfoLog:     infoLog,
+		courseModel: &CourseModel{DB: dbPool},
 	}
 
 	srv := http.Server{

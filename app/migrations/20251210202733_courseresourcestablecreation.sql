@@ -2,14 +2,13 @@
 -- +goose StatementBegin
 CREATE TABLE Courses (
     ID SERIAL PRIMARY KEY,
-    URL VARCHAR(255) NOT NULL UNIQUE,
     Name VARCHAR(255) NOT NULL,
     Duration INT
 );
 
 CREATE TABLE CourseParts (
     ID SERIAL PRIMARY KEY,
-    URL VARCHAR(255) NOT NULL UNIQUE,
+    Name VARCHAR(255) NOT NULL,
     Duration INT NOT NULL,
     Course_id INT NOT NULL,
     FOREIGN KEY (Course_id) REFERENCES Courses(ID)
@@ -18,7 +17,7 @@ CREATE TABLE CourseParts (
 CREATE TABLE CourseFiles (
     ID SERIAL PRIMARY KEY,
     Name VARCHAR(255) NOT NULL,
-    URL VARCHAR(255) NOT NULL,
+    URL VARCHAR(999) NOT NULL,
     Format VARCHAR(255) NOT NULL,
     Duration INT,
     Part_id INT NOT NULL,
