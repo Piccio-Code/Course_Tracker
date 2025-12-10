@@ -16,17 +16,17 @@ func (app *Application) GetCoursesInFolder(w http.ResponseWriter, r *http.Reques
 	var coursesFolder CoursesFolder
 
 	if err := decoder.Decode(&coursesFolder); err != nil {
-		app.errorLog.Println(err)
+		app.ErrorLog.Println(err)
 		http.Error(w, "Form could not be decoded", http.StatusBadRequest)
 		return
 	}
 
-	app.infoLog.Println(coursesFolder)
+	app.InfoLog.Println(coursesFolder)
 
-	folders, err := app.onedrive.GetFolders(coursesFolder.OnedriveURL)
+	folders, err := app.Onedrive.GetFolders(coursesFolder.OnedriveURL)
 
 	if err != nil {
-		app.errorLog.Println(err)
+		app.ErrorLog.Println(err)
 		http.Error(w, fmt.Sprintf("Invalid URL %s", coursesFolder.OnedriveURL), http.StatusBadRequest)
 		return
 	}
