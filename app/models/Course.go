@@ -2,10 +2,9 @@ package models
 
 import (
 	"context"
+	"fmt"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"log"
 )
 
 type CourseModel struct {
@@ -16,11 +15,13 @@ type Course struct {
 	Name     string
 	Duration int
 	Parts    []CoursePart
+	Files    []CourseFile
 }
 
 type CoursePart struct {
 	Name     string
 	Duration int
+	SubParts []CoursePart
 	Files    []CourseFile
 }
 
@@ -31,98 +32,78 @@ type CourseFile struct {
 	Duration int
 }
 
-type CourseFolder struct {
-	Name string
-	URL  string
-}
+func (m *CourseModel) InsertCourse(ctx context.Context, course *Course) (int, error) {
+	query := `INSERT INTO courses(name, duration) VALUES ($1, $2) RETURNING id;`
 
-func (m *CourseModel) InsertCourse(course Course) (pgconn.CommandTag, error) {
-
-	log.Println(course.Name)
-
-	query := `INSERT INTO courses(name, duration) VALUES ($1, $2);`
-
-	tx, err := m.DB.Begin(context.Background())
+	tx, err := m.DB.Begin(ctx)
 
 	if err != nil {
-		return pgconn.CommandTag{}, err
+		return 0, err
 	}
 
-	defer tx.Rollback(context.Background())
-
-	test, err := tx.Exec(context.Background(), query, course.Name, course.Duration)
-
-	if err != nil {
-		return pgconn.CommandTag{}, err
-	}
-
-	query = `SELECT id 
-           FROM courses
-           WHERE name=$1`
+	defer tx.Rollback(ctx)
 
 	var id int
 
-	err = tx.QueryRow(context.Background(), query, course.Name).Scan(&id)
+	err = tx.QueryRow(ctx, query, course.Name, course.Duration).Scan(&id)
 
 	if err != nil {
-		return pgconn.CommandTag{}, err
+		return 0, err
 	}
 
 	for _, part := range course.Parts {
-		err = m.InsertPartInTx(tx, part, id)
+
+		err := m.InsertPart(ctx, tx, part, id, 0)
 
 		if err != nil {
-			return pgconn.CommandTag{}, err
+			return 0, err
+		}
+
+	}
+
+	for _, file := range course.Files {
+		err := m.InsertFiles(ctx, tx, file, 0, id)
+
+		if err != nil {
+			return 0, err
 		}
 	}
 
-	err = tx.Commit(context.Background())
-
-	if err != nil {
-		return pgconn.CommandTag{}, err
-	}
-
-	return test, nil
+	return id, tx.Commit(ctx)
 }
 
-func (m *CourseModel) InsertPart(part CoursePart, courseID int) error {
-	tx, err := m.DB.Begin(context.Background())
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback(context.Background())
-
-	err = m.InsertPartInTx(tx, part, courseID)
-	if err != nil {
-		return err
-	}
-
-	return tx.Commit(context.Background())
-}
-
-func (m *CourseModel) InsertPartInTx(tx pgx.Tx, part CoursePart, courseID int) error {
-	query := `INSERT INTO courseparts(name, duration, course_id) VALUES ($1, $2, $3)`
-
-	_, err := tx.Exec(context.Background(), query, part.Name, part.Duration, courseID)
-
-	if err != nil {
-		return err
-	}
-
-	query = `SELECT id 
-           FROM courseparts
-           WHERE name=$1 AND course_id=$2`
+func (m *CourseModel) InsertPart(ctx context.Context, tx pgx.Tx, part CoursePart, courseId int, partId int) (err error) {
+	query := `INSERT INTO courseparts(name, duration, course_id, part_id) 
+				  VALUES ($1, $2, $3, $4) returning id`
 
 	var id int
 
-	err = tx.QueryRow(context.Background(), query, part.Name, courseID).Scan(&id)
+	if partId == 0 {
+		err = tx.QueryRow(ctx, query, part.Name, part.Duration, courseId, nil).Scan(&id)
+	}
+
+	if courseId == 0 {
+		err = tx.QueryRow(ctx, query, part.Name, part.Duration, nil, partId).Scan(&id)
+	}
 
 	if err != nil {
 		return err
 	}
 
-	for _, file := range part.Files {
-		err = m.InsertFileInTx(tx, file, id)
+	if part.SubParts == nil {
+		for _, file := range part.Files {
+			err = m.InsertFiles(ctx, tx, file, id, 0)
+
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
+	}
+
+	for _, subPart := range part.SubParts {
+		err := m.InsertPart(ctx, tx, subPart, 0, id)
 
 		if err != nil {
 			return err
@@ -132,28 +113,22 @@ func (m *CourseModel) InsertPartInTx(tx pgx.Tx, part CoursePart, courseID int) e
 	return nil
 }
 
-func (m *CourseModel) InsertFile(file CourseFile, partID int) error {
-	tx, err := m.DB.Begin(context.Background())
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback(context.Background())
+func (m *CourseModel) InsertFiles(ctx context.Context, tx pgx.Tx, file CourseFile, partId int, courseId int) error {
+	query := `INSERT INTO coursefiles(name, url, format, duration, part_id, course_id)
+			  VALUES ($1, $2, $3, $4, $5, $6)`
 
-	err = m.InsertFileInTx(tx, file, partID)
-	if err != nil {
-		return err
+	var err error
+
+	if partId == 0 {
+		_, err = tx.Exec(ctx, query, file.Name, file.URL, file.Format, file.Duration, nil, courseId)
 	}
 
-	return tx.Commit(context.Background())
-}
-
-func (m *CourseModel) InsertFileInTx(tx pgx.Tx, file CourseFile, partID int) error {
-	query := `INSERT INTO coursefiles(name, url, format, duration, part_id) VALUES ($1, $2, $3, $4, $5)`
-
-	_, err := tx.Exec(context.Background(), query, file.Name, file.URL, file.Format, file.Duration, partID)
+	if courseId == 0 {
+		_, err = tx.Exec(ctx, query, file.Name, file.URL, file.Format, file.Duration, partId, nil)
+	}
 
 	if err != nil {
-		return err
+		return fmt.Errorf("error inserting the file %s, in to the part %v, course %v\n SQL err: %v", file.Name, partId, courseId, err)
 	}
 
 	return nil

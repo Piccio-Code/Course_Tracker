@@ -10,7 +10,7 @@ CREATE TABLE CourseParts (
     ID SERIAL PRIMARY KEY,
     Name VARCHAR(255) NOT NULL,
     Duration INT NOT NULL,
-    Course_id INT NOT NULL,
+    Course_id INT,
     FOREIGN KEY (Course_id) REFERENCES Courses(ID)
 );
 
@@ -20,7 +20,7 @@ CREATE TABLE CourseFiles (
     URL VARCHAR(999) NOT NULL,
     Format VARCHAR(255) NOT NULL,
     Duration INT,
-    Part_id INT NOT NULL,
+    Part_id INT,
     FOREIGN KEY (Part_id) REFERENCES CourseParts(ID)
 );
 -- +goose StatementEnd

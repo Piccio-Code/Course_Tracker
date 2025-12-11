@@ -68,31 +68,17 @@ func (o *Onedrive) NewCourse(sharedFolderUrl string) (*Course, error) {
 		return nil, err
 	}
 
-	courseParts, totalDuarion, err := o.GetCourseParts(driveItem.GetChildren())
+	courseParts, courseFiles, totalDuration, err := o.GetCourseParts(driveItem.GetChildren())
 
 	if err != nil {
 		return nil, err
 	}
 
-	name, err := o.GetCourseName(sharedFolderUrl)
+	name := *driveItem.GetName()
 
-	if err != nil {
-		return nil, err
-	}
-
-	course := &Course{Name: name, Parts: courseParts, Duration: totalDuarion}
+	course := &Course{Name: name, Parts: courseParts, Files: courseFiles, Duration: totalDuration}
 
 	return course, nil
-}
-
-func (o *Onedrive) GetCourseName(sharedFolderUrl string) (courseFolderName string, err error) {
-	driveItem, err := o.GetDriveItems(sharedFolderUrl)
-
-	if err != nil {
-		return "", err
-	}
-
-	return *driveItem.GetName(), nil
 }
 
 func (o *Onedrive) GetDriveItems(sharedFolderUrl string) (driveItem models.DriveItemable, err error) {
@@ -112,79 +98,97 @@ func (o *Onedrive) GetDriveItems(sharedFolderUrl string) (driveItem models.Drive
 	return driveItem, nil
 }
 
-func (o *Onedrive) GetFilesFromFolder(folder models.DriveItemable) (courseFiles []CourseFile, totalDuration int, err error) {
-	filesItem, err := o.GetDriveItems(*folder.GetWebUrl())
+func (o *Onedrive) GetCourseParts(items []models.DriveItemable) (courseParts []CoursePart, courseFiles []CourseFile, totalDuration int, err error) {
 
-	if err != nil {
-		return nil, 0, err
-	}
+	for _, item := range items {
 
-	files := filesItem.GetChildren()
+		isFile := item.GetFile() != nil
 
-	for _, file := range files {
-		fileName := *file.GetName()
-		url := *file.GetWebUrl()
-		format := getFileFormat(fileName)
-		duration := 0
-
-		if format == "vtt" {
+		if isFile {
+			courseFile := GetCourseFile(item)
+			courseFiles = append(courseFiles, courseFile)
 			continue
 		}
 
-		isVideo := file.GetVideo() != nil
+		PartName := *item.GetName()
 
-		if isVideo {
-			duration = int(*file.GetVideo().GetDuration())
-			totalDuration += duration
-		}
-
-		courseFiles = append(courseFiles, CourseFile{Name: fileName, URL: url, Format: format, Duration: duration})
-	}
-
-	return courseFiles, totalDuration, nil
-}
-
-func (o *Onedrive) GetCourseParts(folders []models.DriveItemable) (courseParts []CoursePart, totalDuration int, err error) {
-
-	for _, folder := range folders {
-		PartName := *folder.GetName()
-
-		files, partDuration, err := o.GetFilesFromFolder(folder)
+		subParts, partFile, partDuration, err := o.GetPart(item)
 
 		if err != nil {
-			return nil, 0, err
+			return nil, nil, 0, err
 		}
 
 		totalDuration += partDuration
 
-		courseParts = append(courseParts, CoursePart{Name: PartName, Files: files, Duration: partDuration})
+		courseParts = append(courseParts, CoursePart{Name: PartName, Files: partFile, SubParts: subParts, Duration: partDuration})
 	}
 
-	return courseParts, totalDuration, nil
+	if courseParts == nil {
+		return nil, nil, 0, fmt.Errorf("no folder found in the directory")
+	}
+
+	return courseParts, courseFiles, totalDuration, nil
 }
 
-func (o *Onedrive) GetFolders(sharedFolderUrl string) (courseFolders []CourseFolder, err error) {
-	folderItem, err := o.GetDriveItems(sharedFolderUrl)
+func (o *Onedrive) GetPart(folder models.DriveItemable) (subParts []CoursePart, partFiles []CourseFile, totalDuration int, err error) {
+	folderContentItem, err := o.GetDriveItems(*folder.GetWebUrl())
 
 	if err != nil {
-		return nil, err
+		return nil, nil, 0, err
 	}
 
-	folders := folderItem.GetChildren()
+	folderContent := folderContentItem.GetChildren()
 
-	for _, folder := range folders {
-		isValidFolder := folder.GetFolder() != nil
+	for _, item := range folderContent {
 
-		if isValidFolder {
-			courseFolders = append(courseFolders, CourseFolder{Name: *folder.GetName(), URL: *folder.GetWebUrl()})
+		isFile := item.GetFile() != nil
+
+		isFolder := item.GetFolder() != nil
+
+		if isFolder {
+			subPart, subFiles, subFilesDuration, err := o.GetPart(item)
+
+			if err != nil {
+				return nil, nil, 0, err
+			}
+
+			subParts = append(subParts, CoursePart{Name: *item.GetName(), SubParts: subPart, Files: subFiles})
+			totalDuration += subFilesDuration
+		}
+
+		if isFile {
+			courseFile := GetCourseFile(item)
+			partFiles = append(partFiles, courseFile)
+			totalDuration += courseFile.Duration
 		}
 	}
 
-	if len(courseFolders) == 0 {
-		return nil, fmt.Errorf("the provided url has no folder\nURL: %s ", sharedFolderUrl)
+	if partFiles == nil {
+		return nil, nil, 0, fmt.Errorf("the are no file in the directory")
 	}
 
-	return courseFolders, nil
+	return subParts, partFiles, totalDuration, nil
+}
+
+func GetCourseFile(file models.DriveItemable) CourseFile {
+	fileName := *file.GetName()
+	url := *file.GetWebUrl()
+	format := getFileFormat(fileName)
+	duration := 0
+
+	isVideo := file.GetVideo() != nil
+
+	if isVideo {
+		duration = int(*file.GetVideo().GetDuration())
+	}
+
+	return CourseFile{Name: fileName, URL: url, Format: format, Duration: duration}
+}
+
+func getFileFormat(filename string) string {
+	ext := filepath.Ext(filename)
+
+	return strings.TrimPrefix(ext, ".")
 }
 
 func getGraphEncodedURL(sharingURL string) string {
@@ -193,10 +197,4 @@ func getGraphEncodedURL(sharingURL string) string {
 	trimmedBase64 := strings.TrimRight(base64Value, "=")
 
 	return "u!" + trimmedBase64
-}
-
-func getFileFormat(filename string) string {
-	ext := filepath.Ext(filename)
-
-	return strings.TrimPrefix(ext, ".")
 }
