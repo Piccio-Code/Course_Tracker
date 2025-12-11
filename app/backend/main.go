@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	. "github.com/Piccio-Code/Course_Tracker/Wrapper"
 	. "github.com/Piccio-Code/Course_Tracker/app/models"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -19,6 +20,11 @@ type Application struct {
 }
 
 func main() {
+
+	onedriveFlag := flag.Bool("onedrive", false, "This flag will connect with onedrive API")
+
+	flag.Parse()
+
 	errorLog := log.New(os.Stderr, "ERROR: \t", log.Ltime|log.Llongfile)
 	infoLog := log.New(os.Stdout, "INFO: \t", log.Ltime)
 
@@ -28,10 +34,16 @@ func main() {
 		errorLog.Fatal(err)
 	}
 
-	onedrive, err := NewOnedrive()
+	var onedrive *Onedrive
 
-	if err != nil {
-		errorLog.Fatal(err)
+	if *onedriveFlag {
+		onedrive, err = NewOnedrive()
+
+		if err != nil {
+			errorLog.Fatal(err)
+		}
+	} else {
+		infoLog.Println("You have disable onedrive API connection")
 	}
 
 	dbPool, err := ConnectToDb(os.Getenv("DATABASE_URL"))
