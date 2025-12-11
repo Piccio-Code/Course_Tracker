@@ -12,6 +12,7 @@ type CourseModel struct {
 }
 
 type Course struct {
+	ID       int
 	Name     string
 	Duration int
 	Parts    []CoursePart
@@ -30,6 +31,42 @@ type CourseFile struct {
 	URL      string
 	Format   string
 	Duration int
+}
+
+func (m *CourseModel) GetCourses(ctx context.Context) (courses []Course, err error) {
+	tx, err := m.DB.Begin(ctx)
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer tx.Rollback(ctx)
+
+	query := `SELECT id, name, duration FROM courses`
+
+	rows, err := tx.Query(ctx, query)
+
+	if err != nil {
+		return nil, err
+	}
+
+	for rows.Next() {
+		var currentCourse Course
+
+		err = rows.Scan(&currentCourse.ID, &currentCourse.Name, &currentCourse.Duration)
+
+		if err != nil {
+			return nil, err
+		}
+
+		courses = append(courses, currentCourse)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return courses, nil
 }
 
 func (m *CourseModel) InsertCourse(ctx context.Context, course *Course) (int, error) {
