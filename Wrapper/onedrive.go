@@ -5,7 +5,6 @@ import (
 	"encoding/base64"
 	"fmt"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
-	. "github.com/Piccio-Code/Course_Tracker/app/models"
 	"github.com/joho/godotenv"
 	. "github.com/microsoftgraph/msgraph-sdk-go"
 	_ "github.com/microsoftgraph/msgraph-sdk-go"
@@ -18,6 +17,27 @@ import (
 
 type Onedrive struct {
 	graphClient *GraphServiceClient
+}
+
+type Course struct {
+	Name     string       `json:"name"`
+	Duration int          `json:"duration"`
+	Parts    []CoursePart `json:"parts"`
+	Files    []CourseFile `json:"files"`
+}
+
+type CoursePart struct {
+	Name     string       `json:"name"`
+	Duration int          `json:"duration"`
+	SubParts []CoursePart `json:"sub-parts"`
+	Files    []CourseFile `json:"files"`
+}
+
+type CourseFile struct {
+	Name     string `json:"name"`
+	URL      string `json:"url"`
+	Format   string `json:"format"`
+	Duration int    `json:"duration"`
 }
 
 func NewOnedrive() (o *Onedrive, err error) {

@@ -40,13 +40,25 @@ func (app *Application) CreateCourse(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *Application) ViewCourses(w http.ResponseWriter, r *http.Request) {
-	courses, err := app.courseModel.GetCourses(r.Context())
+	//courses, err := app.courseModel.GetCourses(r.Context())
+	//
+	//if err != nil {
+	//	app.ErrorLog.Println(err)
+	//	http.Error(w, "Error getting courses", http.StatusBadRequest)
+	//	return
+	//}
+	//
+	//fmt.Fprintln(w, courses)
+}
 
-	if err != nil {
-		app.ErrorLog.Println(err)
-		http.Error(w, "Error getting courses", http.StatusBadRequest)
-		return
-	}
-
-	fmt.Fprintln(w, courses)
+func (app *Application) ViewCourse(w http.ResponseWriter, r *http.Request) {
+	//courses, err := app.courseModel.GetCourses(r.Context())
+	//
+	//if err != nil {
+	//	app.ErrorLog.Println(err)
+	//	http.Error(w, "Error getting courses", http.StatusBadRequest)
+	//	return
+	//}
+	//
+	//fmt.Fprintln(w, courses)
 }

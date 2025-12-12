@@ -21,7 +21,7 @@ type Application struct {
 
 func main() {
 
-	onedriveFlag := flag.Bool("onedrive", false, "This flag will connect with onedrive API")
+	onedriveFlag := flag.Bool("onedrive", true, "This flag will connect with onedrive API")
 
 	flag.Parse()
 

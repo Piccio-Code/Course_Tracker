@@ -8,7 +8,7 @@ func (app *Application) routes() *http.ServeMux {
 	mux.HandleFunc("POST /courses", app.CreateCourse)
 
 	mux.HandleFunc("GET /courses", app.ViewCourses)
-	mux.HandleFunc("GET /courses/{id}", app.ViewCourses)
+	mux.HandleFunc("GET /courses/{id}", app.ViewCourse)
 
 	return mux
 }
