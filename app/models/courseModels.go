@@ -5,13 +5,21 @@ import (
 	"encoding/json"
 	. "github.com/Piccio-Code/Course_Tracker/Wrapper"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"time"
 )
 
 type CourseModel struct {
 	DB *pgxpool.Pool
 }
 
-func (m *CourseModel) InsertCourse(ctx context.Context, course *Course) (id int, err error) {
+type CourseResponse struct {
+	ID              int
+	CourseResources Course
+	Created         time.Time
+	LastUpdated     time.Time
+}
+
+func (m *CourseModel) Insert(ctx context.Context, course *Course) (id int, err error) {
 
 	tx, err := m.DB.Begin(ctx)
 
@@ -19,7 +27,9 @@ func (m *CourseModel) InsertCourse(ctx context.Context, course *Course) (id int,
 		return 0, err
 	}
 
-	stmt := `INSERT INTO course(course_resources) VALUES ($1) returning id`
+	defer tx.Rollback(ctx)
+
+	stmt := `INSERT INTO courses(course_resources) VALUES ($1) returning id`
 
 	data, err := json.Marshal(course)
 
@@ -40,4 +50,125 @@ func (m *CourseModel) InsertCourse(ctx context.Context, course *Course) (id int,
 	}
 
 	return id, nil
+}
+
+func (m *CourseModel) Get(ctx context.Context, id int) (course CourseResponse, err error) {
+	tx, err := m.DB.Begin(ctx)
+
+	if err != nil {
+		return CourseResponse{}, err
+	}
+
+	defer tx.Rollback(ctx)
+
+	stmt := `SELECT id, course_resources, created_at, last_updated FROM courses WHERE id = $1`
+
+	var data []byte
+
+	err = tx.QueryRow(ctx, stmt, id).Scan(&course.ID, &data, &course.Created, &course.LastUpdated)
+
+	if err != nil {
+		return CourseResponse{}, err
+	}
+
+	err = json.Unmarshal(data, &course.CourseResources)
+
+	if err != nil {
+		return CourseResponse{}, err
+	}
+
+	return course, nil
+}
+
+func (m *CourseModel) List(ctx context.Context) (courses []CourseResponse, err error) {
+	tx, err := m.DB.Begin(ctx)
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer tx.Rollback(ctx)
+
+	stmt := `SELECT id, course_resources, created_at, last_updated FROM courses`
+
+	rows, err := tx.Query(ctx, stmt)
+
+	if err != nil {
+		return nil, err
+	}
+
+	for rows.Next() {
+		var course CourseResponse
+		var courseResourcesJson []byte
+
+		err := rows.Scan(&course.ID, &courseResourcesJson, &course.Created, &course.LastUpdated)
+
+		if err != nil {
+			return nil, err
+		}
+
+		err = json.Unmarshal(courseResourcesJson, &course.CourseResources)
+
+		if err != nil {
+			return nil, err
+		}
+
+		courses = append(courses, course)
+	}
+
+	return courses, nil
+}
+
+func (m *CourseModel) Delete(ctx context.Context, id int) error {
+	tx, err := m.DB.Begin(ctx)
+
+	if err != nil {
+		return err
+	}
+
+	defer tx.Rollback(ctx)
+
+	stmt := `DELETE FROM courses WHERE id = $1`
+
+	_, err = tx.Exec(ctx, stmt, id)
+
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit(ctx)
+}
+
+func (m *CourseModel) Update(ctx context.Context, course *Course, id int) (updatedId int, err error) {
+	tx, err := m.DB.Begin(ctx)
+
+	if err != nil {
+		return 0, err
+	}
+
+	defer tx.Rollback(ctx)
+
+	stmt := `UPDATE courses
+			 SET course_resources = $1, last_updated = current_timestamp
+			 WHERE id = $2 RETURNING id`
+
+	courseResourcesJson, err := json.Marshal(course)
+
+	if err != nil {
+		return 0, err
+	}
+
+	err = tx.QueryRow(ctx, stmt, courseResourcesJson, id).Scan(&updatedId)
+
+	if err != nil {
+		return 0, err
+	}
+
+	err = tx.Commit(ctx)
+
+	if err != nil {
+		return 0, err
+	}
+
+	return updatedId, nil
 }

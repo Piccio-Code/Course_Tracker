@@ -10,5 +10,9 @@ func (app *Application) routes() *http.ServeMux {
 	mux.HandleFunc("GET /courses", app.ViewCourses)
 	mux.HandleFunc("GET /courses/{id}", app.ViewCourse)
 
+	mux.HandleFunc("PUT /courses/{id}", app.UpdateCourse)
+
+	mux.HandleFunc("DELETE /courses/{id}", app.DeleteCourse)
+
 	return mux
 }
