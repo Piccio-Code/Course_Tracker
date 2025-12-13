@@ -14,5 +14,5 @@ func (app *Application) routes() http.Handler {
 
 	mux.HandleFunc("DELETE /courses/{id}", app.DeleteCourse)
 
-	return app.Logger(mux)
+	return app.Logger(app.enableCORS(mux))
 }
