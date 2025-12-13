@@ -13,10 +13,10 @@ type CourseModel struct {
 }
 
 type CourseResponse struct {
-	ID              int
-	CourseResources Course
-	Created         time.Time
-	LastUpdated     time.Time
+	ID              int       `json:"id"`
+	CourseResources Course    `json:"courseResources"`
+	Created         time.Time `json:"created"`
+	LastUpdated     time.Time `json:"lastUpdated"`
 }
 
 func (m *CourseModel) Insert(ctx context.Context, course *Course) (id int, err error) {

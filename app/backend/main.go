@@ -16,7 +16,7 @@ type Application struct {
 	Onedrive    *Onedrive
 	ErrorLog    *log.Logger
 	InfoLog     *log.Logger
-	courseModel *CourseModel
+	CourseModel *CourseModel
 }
 
 func main() {
@@ -56,7 +56,7 @@ func main() {
 		Onedrive:    onedrive,
 		ErrorLog:    errorLog,
 		InfoLog:     infoLog,
-		courseModel: &CourseModel{DB: dbPool},
+		CourseModel: &CourseModel{DB: dbPool},
 	}
 
 	srv := http.Server{
@@ -65,8 +65,8 @@ func main() {
 		ErrorLog: app.ErrorLog,
 	}
 
-	log.Println("Server starting on http://localhost:8080")
-	log.Fatal(srv.ListenAndServe())
+	app.InfoLog.Println("Server starting on http://localhost:8080")
+	app.ErrorLog.Fatal(srv.ListenAndServe())
 }
 
 func ConnectToDb(dsn string) (*pgxpool.Pool, error) {

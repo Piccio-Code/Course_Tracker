@@ -17,7 +17,7 @@ func (app *Application) CreateCourse(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id, err := app.courseModel.Insert(r.Context(), course)
+	id, err := app.CourseModel.Insert(r.Context(), course)
 
 	if err != nil {
 		app.ErrorLog.Println(err)
@@ -29,7 +29,7 @@ func (app *Application) CreateCourse(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *Application) ViewCourses(w http.ResponseWriter, r *http.Request) {
-	courses, err := app.courseModel.List(r.Context())
+	courses, err := app.CourseModel.List(r.Context())
 
 	if err != nil {
 		app.ErrorLog.Println(err)
@@ -55,7 +55,7 @@ func (app *Application) ViewCourse(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	course, err := app.courseModel.Get(r.Context(), id)
+	course, err := app.CourseModel.Get(r.Context(), id)
 
 	if err != nil {
 		app.ErrorLog.Println(err)
@@ -89,7 +89,7 @@ func (app *Application) DeleteCourse(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = app.courseModel.Delete(r.Context(), id)
+	err = app.CourseModel.Delete(r.Context(), id)
 
 	if err != nil {
 		app.ErrorLog.Println(err)
@@ -123,7 +123,7 @@ func (app *Application) UpdateCourse(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id, err = app.courseModel.Update(r.Context(), course, id)
+	id, err = app.CourseModel.Update(r.Context(), course, id)
 
 	if err != nil {
 		app.ErrorLog.Println(err)
