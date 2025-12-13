@@ -38,6 +38,15 @@ const getSubParts = (part: ApiCoursePart): ApiCoursePart[] => {
   return Array.isArray(nested) ? nested : [];
 };
 
+const cleanTitle = (name?: string): string => {
+  if (!name) return 'Lesson';
+  const lastDot = name.lastIndexOf('.');
+  if (lastDot > 0) {
+    return name.substring(0, lastDot);
+  }
+  return name;
+};
+
 const collectLessonsFromPart = (part: ApiCoursePart, partId: string): Lesson[] => {
   const lessons: Lesson[] = [];
 
@@ -45,7 +54,7 @@ const collectLessonsFromPart = (part: ApiCoursePart, partId: string): Lesson[] =
   files.forEach((file, idx) => {
     lessons.push({
       id: `${partId}-file-${idx}`,
-      title: file.name || `File ${idx + 1}`,
+      title: cleanTitle(file.name) || `File ${idx + 1}`,
       duration: formatDuration(file.duration),
       isCompleted: false,
       type: 'video',
@@ -84,7 +93,7 @@ const collectLessonsFromPart = (part: ApiCoursePart, partId: string): Lesson[] =
 
 const mapApiPartToModule = (part: ApiCoursePart, index: number): Module => ({
   id: `mod-${index}`,
-  title: part.name || `Part ${index + 1}`,
+  title: cleanTitle(part.name) || `Part ${index + 1}`,
   lessons: collectLessonsFromPart(part, `part-${index}`),
 });
 

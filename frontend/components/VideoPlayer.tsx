@@ -89,6 +89,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ title, videoUrl, isPlaying, o
           controls={false}
           playsInline
           preload="metadata"
+          onClick={handleTogglePlay}
         />
       ) : (
         /* Video Placeholder Content */
