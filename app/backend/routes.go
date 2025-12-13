@@ -2,7 +2,7 @@ package main
 
 import "net/http"
 
-func (app *Application) routes() *http.ServeMux {
+func (app *Application) routes() http.Handler {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("POST /courses", app.CreateCourse)
@@ -14,5 +14,5 @@ func (app *Application) routes() *http.ServeMux {
 
 	mux.HandleFunc("DELETE /courses/{id}", app.DeleteCourse)
 
-	return mux
+	return app.Logger(mux)
 }
