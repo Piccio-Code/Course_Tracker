@@ -80,7 +80,7 @@ func NewOnedrive() (o *Onedrive, err error) {
 	return &Onedrive{graphClient: graphClient}, nil
 }
 
-func (o *Onedrive) NewCourse(sharedFolderUrl string) (*Course, error) {
+func (o *Onedrive) NewCourse(sharedFolderUrl string, name string) (*Course, error) {
 
 	driveItem, err := o.GetDriveItems(sharedFolderUrl)
 
@@ -94,7 +94,9 @@ func (o *Onedrive) NewCourse(sharedFolderUrl string) (*Course, error) {
 		return nil, err
 	}
 
-	name := *driveItem.GetName()
+	if name == "" {
+		name = *driveItem.GetName()
+	}
 
 	course := &Course{Name: name, Parts: courseParts, Files: courseFiles, Duration: totalDuration}
 
