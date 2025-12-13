@@ -37,7 +37,15 @@ func (app *Application) ViewCourses(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Fprintln(w, courses)
+	coursesJson, err := json.MarshalIndent(courses, "", "\t")
+
+	if err != nil {
+		app.ErrorLog.Println(err)
+		http.Error(w, "Error getting courses", http.StatusBadRequest)
+		return
+	}
+
+	fmt.Fprintln(w, string(coursesJson))
 }
 
 func (app *Application) ViewCourse(w http.ResponseWriter, r *http.Request) {

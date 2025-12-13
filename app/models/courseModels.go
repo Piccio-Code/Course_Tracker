@@ -19,6 +19,13 @@ type CourseResponse struct {
 	LastUpdated     time.Time `json:"lastUpdated"`
 }
 
+type CoursesListResponse struct {
+	ID          int       `json:"id"`
+	Name        string    `json:"name"`
+	Created     time.Time `json:"created"`
+	LastUpdated time.Time `json:"lastUpdated"`
+}
+
 func (m *CourseModel) Insert(ctx context.Context, course *Course) (id int, err error) {
 
 	tx, err := m.DB.Begin(ctx)
@@ -80,7 +87,7 @@ func (m *CourseModel) Get(ctx context.Context, id int) (course CourseResponse, e
 	return course, nil
 }
 
-func (m *CourseModel) List(ctx context.Context) (courses []CourseResponse, err error) {
+func (m *CourseModel) List(ctx context.Context) (courses []CoursesListResponse, err error) {
 	tx, err := m.DB.Begin(ctx)
 
 	if err != nil {
@@ -89,7 +96,7 @@ func (m *CourseModel) List(ctx context.Context) (courses []CourseResponse, err e
 
 	defer tx.Rollback(ctx)
 
-	stmt := `SELECT id, course_resources, created_at, last_updated FROM courses`
+	stmt := `SELECT id, course_resources->'name', created_at, last_updated FROM courses`
 
 	rows, err := tx.Query(ctx, stmt)
 
@@ -98,16 +105,16 @@ func (m *CourseModel) List(ctx context.Context) (courses []CourseResponse, err e
 	}
 
 	for rows.Next() {
-		var course CourseResponse
-		var courseResourcesJson []byte
+		var course CoursesListResponse
+		var courseName []byte
 
-		err := rows.Scan(&course.ID, &courseResourcesJson, &course.Created, &course.LastUpdated)
+		err := rows.Scan(&course.ID, &courseName, &course.Created, &course.LastUpdated)
 
 		if err != nil {
 			return nil, err
 		}
 
-		err = json.Unmarshal(courseResourcesJson, &course.CourseResources)
+		err = json.Unmarshal(courseName, &course.Name)
 
 		if err != nil {
 			return nil, err
