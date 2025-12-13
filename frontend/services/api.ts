@@ -39,7 +39,7 @@ const getSubParts = (part: ApiCoursePart): ApiCoursePart[] => {
 };
 
 const cleanTitle = (name?: string): string => {
-  if (!name) return 'Lesson';
+  if (!name) return '';
   const lastDot = name.lastIndexOf('.');
   if (lastDot > 0) {
     return name.substring(0, lastDot);
@@ -93,7 +93,7 @@ const collectLessonsFromPart = (part: ApiCoursePart, partId: string): Lesson[] =
 
 const mapApiPartToModule = (part: ApiCoursePart, index: number): Module => ({
   id: `mod-${index}`,
-  title: cleanTitle(part.name) || `Part ${index + 1}`,
+  title: part.name?.trim() || `Part ${index + 1}`,
   lessons: collectLessonsFromPart(part, `part-${index}`),
 });
 
