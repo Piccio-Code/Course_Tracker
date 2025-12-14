@@ -79,19 +79,39 @@ const App: React.FC = () => {
     setViewMode('player');
   };
 
-  const handleAddCourse = (newCourseData: Partial<Course>) => {
-    // Optimistic UI update
-    const newCourse: Course = {
-        id: `course-${Date.now()}`,
-        title: newCourseData.title!,
-        description: newCourseData.description!,
-        thumbnailGradient: newCourseData.thumbnailGradient!,
-        progress: 0,
-        totalLessons: 0,
-        modules: [],
-        ...newCourseData
-    } as Course;
-    setCourses([...courses, newCourse]);
+  const handleAddCourse = async (name: string, url: string): Promise<boolean> => {
+    try {
+      const formData = new URLSearchParams();
+      formData.append('name', name);
+      formData.append('url', url);
+
+      const res = await fetch(`${API_BASE_URL}/courses`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: formData.toString(),
+      });
+
+      if (!res.ok) {
+        console.error('Failed to create course:', res.status);
+        return false;
+      }
+
+      // Refresh the courses list
+      const listRes = await fetch(`${API_BASE_URL}/courses`);
+      if (listRes.ok) {
+        const data: unknown = await listRes.json();
+        if (Array.isArray(data) && data.length > 0) {
+          setCourses((data as API_CoursesListResponse[]).map(mapListResponseToCourseSummary));
+        }
+      }
+
+      return true;
+    } catch (err) {
+      console.error('Error creating course:', err);
+      return false;
+    }
   };
 
   const handleSelectLesson = (lesson: Lesson, module: Module) => {

@@ -5,30 +5,36 @@ import { Plus, Play, MoreVertical, BookOpen, Clock, BarChart } from 'lucide-reac
 interface CourseDashboardProps {
   courses: Course[];
   onSelectCourse: (course: Course) => void;
-  onAddCourse: (course: Partial<Course>) => void;
+  onAddCourse: (name: string, url: string) => Promise<boolean>;
 }
 
 const CourseDashboard: React.FC<CourseDashboardProps> = ({ courses, onSelectCourse, onAddCourse }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [newCourseTitle, setNewCourseTitle] = useState('');
-  const [newCourseDesc, setNewCourseDesc] = useState('');
+  const [newCourseName, setNewCourseName] = useState('');
+  const [newCourseUrl, setNewCourseUrl] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleCreateCourse = (e: React.FormEvent) => {
+  const handleCreateCourse = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newCourseTitle) return;
+    if (!newCourseName || !newCourseUrl) return;
 
-    onAddCourse({
-      title: newCourseTitle,
-      description: newCourseDesc || "New awesome course",
-      thumbnailGradient: "from-emerald-500 to-teal-600",
-      progress: 0,
-      totalLessons: 0,
-      modules: []
-    });
+    setIsSubmitting(true);
+    setError(null);
+
+    const success = await onAddCourse(newCourseName, newCourseUrl);
     
-    setNewCourseTitle('');
-    setNewCourseDesc('');
-    setIsModalOpen(false);
+    setIsSubmitting(false);
+
+    if (success) {
+      setNewCourseName('');
+      setNewCourseUrl('');
+      setIsModalOpen(false);
+    } else {
+      // On error, keep the name but clear the URL so user can fix it
+      setNewCourseUrl('');
+      setError('Failed to create course. Please check the URL and try again.');
+    }
   };
 
   return (
@@ -111,41 +117,47 @@ const CourseDashboard: React.FC<CourseDashboardProps> = ({ courses, onSelectCour
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
             <div className="bg-[#161b22] border border-gray-700 w-full max-w-md rounded-2xl p-6 shadow-2xl scale-100 animate-in zoom-in-95 duration-200">
                 <h2 className="text-xl font-bold text-white mb-4">Create New Course</h2>
+                {error && (
+                    <div className="mb-4 p-3 bg-red-500/20 border border-red-500/50 rounded-lg text-red-400 text-sm">
+                        {error}
+                    </div>
+                )}
                 <form onSubmit={handleCreateCourse} className="space-y-4">
                     <div>
-                        <label className="block text-sm text-gray-400 mb-1">Course Title</label>
+                        <label className="block text-sm text-gray-400 mb-1">Course Name</label>
                         <input 
                             type="text" 
                             className="w-full bg-[#0d1117] border border-gray-700 rounded-lg p-3 text-white focus:border-purple-500 focus:ring-1 focus:ring-purple-500 outline-none transition-all"
                             placeholder="e.g. Advanced Golang Patterns"
-                            value={newCourseTitle}
-                            onChange={(e) => setNewCourseTitle(e.target.value)}
+                            value={newCourseName}
+                            onChange={(e) => setNewCourseName(e.target.value)}
                             autoFocus
                         />
                     </div>
                     <div>
-                        <label className="block text-sm text-gray-400 mb-1">Description</label>
-                        <textarea 
-                            className="w-full bg-[#0d1117] border border-gray-700 rounded-lg p-3 text-white focus:border-purple-500 focus:ring-1 focus:ring-purple-500 outline-none transition-all resize-none h-24"
-                            placeholder="What will you learn?"
-                            value={newCourseDesc}
-                            onChange={(e) => setNewCourseDesc(e.target.value)}
+                        <label className="block text-sm text-gray-400 mb-1">URL Link</label>
+                        <input 
+                            type="url"
+                            className="w-full bg-[#0d1117] border border-gray-700 rounded-lg p-3 text-white focus:border-purple-500 focus:ring-1 focus:ring-purple-500 outline-none transition-all"
+                            placeholder="https://onedrive.com/..."
+                            value={newCourseUrl}
+                            onChange={(e) => setNewCourseUrl(e.target.value)}
                         />
                     </div>
                     <div className="flex justify-end space-x-3 mt-6">
                         <button 
                             type="button"
-                            onClick={() => setIsModalOpen(false)}
+                            onClick={() => { setIsModalOpen(false); setError(null); }}
                             className="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors"
                         >
                             Cancel
                         </button>
                         <button 
                             type="submit"
-                            disabled={!newCourseTitle}
+                            disabled={!newCourseName || !newCourseUrl || isSubmitting}
                             className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            Create Course
+                            {isSubmitting ? 'Creating...' : 'Create Course'}
                         </button>
                     </div>
                 </form>
