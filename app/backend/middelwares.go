@@ -5,15 +5,29 @@ import (
 	"time"
 )
 
+type logResponder struct {
+	http.ResponseWriter
+	code int
+	set  bool
+}
+
+func (rw *logResponder) WriteHeader(code int) {
+	rw.code = code
+	rw.set = true
+	rw.ResponseWriter.WriteHeader(code)
+}
+
 func (app *Application) Logger(next http.Handler) http.Handler {
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 		start := time.Now()
 
-		next.ServeHTTP(w, r)
+		logWriter := &logResponder{w, 200, false}
 
-		app.InfoLog.Printf("%s %s %s %v", r.RemoteAddr, r.Method, r.URL.Path, time.Since(start))
+		next.ServeHTTP(logWriter, r)
+
+		app.InfoLog.Printf("%s %d %s %v", r.Method, logWriter.code, r.URL.Path, time.Since(start))
 	})
 }
 
