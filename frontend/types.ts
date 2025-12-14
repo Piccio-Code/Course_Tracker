@@ -1,9 +1,10 @@
-// --- API Types (matching Go structs) ---
+// --- API Types (Matching Go Structs) ---
+
 export interface API_CourseFile {
   name: string;
   url: string;
   format: string;
-  duration: number; // seconds or milliseconds
+  duration: number; // Seconds
 }
 
 export interface API_CoursePart {
@@ -23,8 +24,8 @@ export interface API_Course {
 export interface API_CourseResponse {
   id: number;
   courseResources: API_Course;
-  created: string;
-  lastUpdated: string;
+  created: string; // ISO Date string
+  lastUpdated: string; // ISO Date string
 }
 
 export interface API_CoursesListResponse {
@@ -34,11 +35,12 @@ export interface API_CoursesListResponse {
   lastUpdated: string;
 }
 
-// --- UI Types ---
+// --- UI Types (Consumed by React Components) ---
+
 export interface Lesson {
   id: string;
   title: string;
-  duration: string; // formatted MM:SS
+  duration: string; // Formatted MM:SS
   isCompleted: boolean;
   type: 'video' | 'text' | 'quiz';
   videoUrl?: string;
@@ -52,11 +54,11 @@ export interface Module {
 }
 
 export interface Course {
-  id: string;
+  id: string; // Converted to string for consistency
   title: string;
-  description: string;
-  thumbnailGradient: string;
-  progress: number;
+  description: string; // Generated/Placeholder as API doesn't provide yet
+  thumbnailGradient: string; // UI only
+  progress: number; // UI only
   totalLessons: number;
   modules: Module[];
 }
@@ -65,4 +67,3 @@ export interface UserProgress {
   completedLessonIds: string[];
   lastPlayedLessonId: string;
 }
-
