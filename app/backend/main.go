@@ -7,6 +7,7 @@ import (
 	. "github.com/Piccio-Code/Course_Tracker/app/models"
 	"github.com/alexedwards/scs/pgxstore"
 	"github.com/alexedwards/scs/v2"
+	"github.com/fatih/color"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
 	"log"
@@ -47,8 +48,9 @@ func main() {
 		if err != nil {
 			errorLog.Fatal(err)
 		}
+
 	} else {
-		infoLog.Println("You have disable onedrive API connection")
+		infoLog.Println(color.RedString("You have disable onedrive API connection"))
 	}
 
 	dbPool, err := ConnectToDb(os.Getenv("DATABASE_URL"))
