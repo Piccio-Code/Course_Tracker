@@ -7,9 +7,20 @@ import (
 	"github.com/ajg/form"
 )
 
+type AuthenticatedUserKey string
+
+const AuthKey = AuthenticatedUserKey("AuthenticatedUserKey")
+const AuthenticatedUserId = "AuthenticatedUserId"
+
 type CourseForm struct {
 	URL  string `form:"url"`
 	Name string `form:"name"`
+}
+
+type UserForm struct {
+	Username string `form:"username"`
+	Email    string `form:"email"`
+	Password string `form:"password"`
 }
 
 func (app *Application) GetCourseFormLink(r *http.Request) (course *Course, err error) {
@@ -23,4 +34,25 @@ func (app *Application) GetCourseFormLink(r *http.Request) (course *Course, err 
 	}
 
 	return app.Onedrive.NewCourse(courseForm.URL, courseForm.Name)
+}
+
+func (app *Application) GetUserFrom(r *http.Request) (user UserForm, err error) {
+	d := form.NewDecoder(r.Body)
+
+	if err := d.Decode(&user); err != nil {
+		app.ErrorLog.Println(err)
+		return UserForm{}, err
+	}
+
+	return user, nil
+}
+
+func (app *Application) IsAuthenticated(r *http.Request) bool {
+	isAuth, ok := r.Context().Value(AuthKey).(bool)
+
+	if !ok {
+		return false
+	}
+
+	return isAuth
 }

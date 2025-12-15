@@ -5,18 +5,23 @@ import (
 	"flag"
 	. "github.com/Piccio-Code/Course_Tracker/Wrapper"
 	. "github.com/Piccio-Code/Course_Tracker/app/models"
+	"github.com/alexedwards/scs/pgxstore"
+	"github.com/alexedwards/scs/v2"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
 	"log"
 	"net/http"
 	"os"
+	"time"
 )
 
 type Application struct {
-	Onedrive    *Onedrive
-	ErrorLog    *log.Logger
-	InfoLog     *log.Logger
-	CourseModel *CourseModel
+	Onedrive       *Onedrive
+	ErrorLog       *log.Logger
+	InfoLog        *log.Logger
+	CourseModel    *CourseModel
+	UserModel      *UserModel
+	SessionManager *scs.SessionManager
 }
 
 func main() {
@@ -52,11 +57,21 @@ func main() {
 		errorLog.Fatal(err)
 	}
 
+	sessionManager := scs.New()
+	sessionManager.Store = pgxstore.New(dbPool)
+	sessionManager.Lifetime = 12 * time.Hour
+	sessionManager.Cookie.HttpOnly = true
+	sessionManager.Cookie.Persist = true
+	sessionManager.Cookie.SameSite = http.SameSiteStrictMode
+	sessionManager.Cookie.Secure = true
+
 	app := Application{
-		Onedrive:    onedrive,
-		ErrorLog:    errorLog,
-		InfoLog:     infoLog,
-		CourseModel: &CourseModel{DB: dbPool},
+		Onedrive:       onedrive,
+		ErrorLog:       errorLog,
+		InfoLog:        infoLog,
+		CourseModel:    &CourseModel{DB: dbPool},
+		UserModel:      &UserModel{DB: dbPool},
+		SessionManager: sessionManager,
 	}
 
 	srv := http.Server{

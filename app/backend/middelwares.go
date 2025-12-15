@@ -31,8 +31,6 @@ func (app *Application) Logger(next http.Handler) http.Handler {
 	})
 }
 
-// enableCORS adds permissive CORS headers for local frontend development.
-// Keep scope limited to what we need for the React app.
 func (app *Application) enableCORS(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -44,6 +42,29 @@ func (app *Application) enableCORS(next http.Handler) http.Handler {
 			w.WriteHeader(http.StatusNoContent)
 			return
 		}
+
+		next.ServeHTTP(w, r)
+	})
+}
+
+func (app *Application) RequireAuthentication(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		id := app.SessionManager.GetInt(r.Context(), AuthenticatedUserId)
+		exist, err := app.UserModel.Exist(r.Context(), id)
+
+		if err != nil {
+			app.ErrorLog.Println(err)
+			http.Error(w, "Error checking user existence", http.StatusInternalServerError)
+			return
+		}
+
+		if !exist {
+			http.Error(w, "Error user is Unauthorized", http.StatusUnauthorized)
+			return
+		}
+
+		w.Header().Add("Cache-Control", "no-store")
 
 		next.ServeHTTP(w, r)
 	})

@@ -1,18 +1,28 @@
 package main
 
-import "net/http"
+import (
+	"github.com/justinas/alice"
+	"net/http"
+)
 
 func (app *Application) routes() http.Handler {
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("POST /courses", app.CreateCourse)
+	standardMiddleware := alice.New(app.SessionManager.LoadAndSave, app.Logger, app.enableCORS)
+	protect := alice.New(app.RequireAuthentication)
 
-	mux.HandleFunc("GET /courses", app.ViewCourses)
-	mux.HandleFunc("GET /courses/{id}", app.ViewCourse)
+	mux.Handle("POST /courses", protect.ThenFunc(app.CreateCourse))
 
-	mux.HandleFunc("PUT /courses/{id}", app.UpdateCourse)
+	mux.Handle("GET /courses", protect.ThenFunc(app.ViewCourses))
+	mux.Handle("GET /courses/{id}", protect.ThenFunc(app.ViewCourse))
 
-	mux.HandleFunc("DELETE /courses/{id}", app.DeleteCourse)
+	mux.Handle("PUT /courses/{id}", protect.ThenFunc(app.UpdateCourse))
 
-	return app.Logger(app.enableCORS(mux))
+	mux.Handle("DELETE /courses/{id}", protect.ThenFunc(app.DeleteCourse))
+
+	mux.HandleFunc("POST /auth/signup", app.Signup)
+	mux.HandleFunc("POST /auth/login", app.Login)
+	mux.Handle("POST /auth/logout", protect.ThenFunc(app.Logout))
+
+	return standardMiddleware.Then(mux)
 }

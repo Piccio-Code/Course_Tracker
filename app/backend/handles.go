@@ -3,9 +3,75 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	. "github.com/Piccio-Code/Course_Tracker/app/models"
 	"net/http"
 	"strconv"
 )
+
+func (app *Application) Signup(w http.ResponseWriter, r *http.Request) {
+	userForm, err := app.GetUserFrom(r)
+
+	if err != nil {
+		app.ErrorLog.Println(err)
+		http.Error(w, fmt.Sprintf("Error parsing the body"), http.StatusBadRequest)
+		return
+	}
+
+	id, err := app.UserModel.Insert(r.Context(), User{Username: userForm.Username, Email: userForm.Email, Password: userForm.Password})
+
+	if err != nil {
+		app.ErrorLog.Println(err)
+		http.Error(w, fmt.Sprintf("Error signing up"), http.StatusBadRequest)
+		return
+	}
+
+	err = app.SessionManager.RenewToken(r.Context())
+
+	if err != nil {
+		app.ErrorLog.Println(err)
+		http.Error(w, fmt.Sprintf("Error renewing the token up"), http.StatusInternalServerError)
+		return
+	}
+
+	app.SessionManager.Put(r.Context(), AuthenticatedUserId, id)
+	fmt.Fprintln(w, "Successfully sign up")
+}
+
+func (app *Application) Login(w http.ResponseWriter, r *http.Request) {
+	userForm, err := app.GetUserFrom(r)
+
+	if err != nil {
+		app.ErrorLog.Println(err)
+		http.Error(w, fmt.Sprintf("Error parsing the body"), http.StatusBadRequest)
+		return
+	}
+
+	id, err := app.UserModel.Get(r.Context(), User{Username: userForm.Username, Email: userForm.Email, Password: userForm.Password})
+
+	if err != nil {
+		app.ErrorLog.Println(err)
+		http.Error(w, fmt.Sprintf("Error getting the user"), http.StatusInternalServerError)
+		return
+	}
+
+	err = app.SessionManager.RenewToken(r.Context())
+
+	if err != nil {
+		app.ErrorLog.Println(err)
+		http.Error(w, fmt.Sprintf("Error renewing the token up"), http.StatusInternalServerError)
+		return
+	}
+
+	app.SessionManager.Put(r.Context(), AuthenticatedUserId, id)
+
+	fmt.Fprintln(w, "Successfully login")
+}
+
+func (app *Application) Logout(w http.ResponseWriter, r *http.Request) {
+	app.SessionManager.PopInt(r.Context(), AuthenticatedUserId)
+
+	fmt.Fprintln(w, "Successfully logout")
+}
 
 func (app *Application) CreateCourse(w http.ResponseWriter, r *http.Request) {
 
