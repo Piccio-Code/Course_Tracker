@@ -12,6 +12,7 @@ func (app *Application) routes() http.Handler {
 	protect := alice.New(app.RequireAuthentication)
 
 	mux.Handle("POST /courses", protect.ThenFunc(app.CreateCourse))
+	mux.Handle("POST /courses/demo", protect.ThenFunc(app.CreateCourseDemo))
 
 	mux.Handle("GET /courses", protect.ThenFunc(app.ViewCourses))
 	mux.Handle("GET /courses/{id}", protect.ThenFunc(app.ViewCourse))

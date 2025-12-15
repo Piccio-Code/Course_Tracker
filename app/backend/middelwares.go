@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"net/http"
 	"time"
 )
@@ -65,6 +66,9 @@ func (app *Application) RequireAuthentication(next http.Handler) http.Handler {
 		}
 
 		w.Header().Add("Cache-Control", "no-store")
+
+		ctx := context.WithValue(r.Context(), CurrentUserIdKey, id)
+		r = r.WithContext(ctx)
 
 		next.ServeHTTP(w, r)
 	})

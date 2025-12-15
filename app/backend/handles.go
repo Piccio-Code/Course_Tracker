@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	wrapper "github.com/Piccio-Code/Course_Tracker/Wrapper"
 	. "github.com/Piccio-Code/Course_Tracker/app/models"
 	"net/http"
 	"strconv"
@@ -73,6 +74,27 @@ func (app *Application) Logout(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, "Successfully logout")
 }
 
+func (app *Application) CreateCourseDemo(w http.ResponseWriter, r *http.Request) {
+
+	userId, ok := r.Context().Value(CurrentUserIdKey).(int)
+
+	if !ok {
+		http.Error(w, "Error parsing the User id", http.StatusBadRequest)
+		return
+	}
+
+	id, err := app.CourseModel.Insert(r.Context(), &wrapper.Course{Name: "test", Duration: 10}, userId)
+
+	if err != nil {
+		app.ErrorLog.Println(err)
+		http.Error(w, "Error inserting the course", http.StatusBadRequest)
+		return
+	}
+
+	fmt.Fprintf(w, "ID of inserted course: %d", id)
+
+}
+
 func (app *Application) CreateCourse(w http.ResponseWriter, r *http.Request) {
 
 	course, err := app.GetCourseFormLink(r)
@@ -83,7 +105,14 @@ func (app *Application) CreateCourse(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id, err := app.CourseModel.Insert(r.Context(), course)
+	userId, ok := r.Context().Value(CurrentUserIdKey).(int)
+
+	if !ok {
+		http.Error(w, "Error parsing the User id", http.StatusBadRequest)
+		return
+	}
+
+	id, err := app.CourseModel.Insert(r.Context(), course, userId)
 
 	if err != nil {
 		app.ErrorLog.Println(err)
@@ -95,7 +124,14 @@ func (app *Application) CreateCourse(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *Application) ViewCourses(w http.ResponseWriter, r *http.Request) {
-	courses, err := app.CourseModel.List(r.Context())
+	userId, ok := r.Context().Value(CurrentUserIdKey).(int)
+
+	if !ok {
+		http.Error(w, "Error parsing the User id", http.StatusBadRequest)
+		return
+	}
+
+	courses, err := app.CourseModel.List(r.Context(), userId)
 
 	if err != nil {
 		app.ErrorLog.Println(err)
@@ -129,7 +165,14 @@ func (app *Application) ViewCourse(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	course, err := app.CourseModel.Get(r.Context(), id)
+	userId, ok := r.Context().Value(CurrentUserIdKey).(int)
+
+	if !ok {
+		http.Error(w, "Error parsing the User id", http.StatusBadRequest)
+		return
+	}
+
+	course, err := app.CourseModel.Get(r.Context(), id, userId)
 
 	if err != nil {
 		app.ErrorLog.Println(err)
@@ -163,7 +206,14 @@ func (app *Application) DeleteCourse(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = app.CourseModel.Delete(r.Context(), id)
+	userId, ok := r.Context().Value(CurrentUserIdKey).(int)
+
+	if !ok {
+		http.Error(w, "Error parsing the User id", http.StatusBadRequest)
+		return
+	}
+
+	err = app.CourseModel.Delete(r.Context(), id, userId)
 
 	if err != nil {
 		app.ErrorLog.Println(err)
@@ -197,7 +247,14 @@ func (app *Application) UpdateCourse(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id, err = app.CourseModel.Update(r.Context(), course, id)
+	userId, ok := r.Context().Value(CurrentUserIdKey).(int)
+
+	if !ok {
+		http.Error(w, "Error parsing the User id", http.StatusBadRequest)
+		return
+	}
+
+	id, err = app.CourseModel.Update(r.Context(), course, id, userId)
 
 	if err != nil {
 		app.ErrorLog.Println(err)

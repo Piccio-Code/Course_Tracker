@@ -26,7 +26,7 @@ type CoursesListResponse struct {
 	LastUpdated time.Time `json:"lastUpdated"`
 }
 
-func (m *CourseModel) Insert(ctx context.Context, course *Course) (id int, err error) {
+func (m *CourseModel) Insert(ctx context.Context, course *Course, userId int) (id int, err error) {
 
 	tx, err := m.DB.Begin(ctx)
 
@@ -36,7 +36,7 @@ func (m *CourseModel) Insert(ctx context.Context, course *Course) (id int, err e
 
 	defer tx.Rollback(ctx)
 
-	stmt := `INSERT INTO courses(course_resources) VALUES ($1) returning id`
+	stmt := `INSERT INTO courses(course_resources, user_id) VALUES ($1, $2) returning id`
 
 	data, err := json.Marshal(course)
 
@@ -44,7 +44,7 @@ func (m *CourseModel) Insert(ctx context.Context, course *Course) (id int, err e
 		return 0, err
 	}
 
-	err = tx.QueryRow(ctx, stmt, data).Scan(&id)
+	err = tx.QueryRow(ctx, stmt, data, userId).Scan(&id)
 
 	if err != nil {
 		return 0, err
@@ -59,7 +59,7 @@ func (m *CourseModel) Insert(ctx context.Context, course *Course) (id int, err e
 	return id, nil
 }
 
-func (m *CourseModel) Get(ctx context.Context, id int) (course CourseResponse, err error) {
+func (m *CourseModel) Get(ctx context.Context, id int, userId int) (course CourseResponse, err error) {
 	tx, err := m.DB.Begin(ctx)
 
 	if err != nil {
@@ -68,11 +68,11 @@ func (m *CourseModel) Get(ctx context.Context, id int) (course CourseResponse, e
 
 	defer tx.Rollback(ctx)
 
-	stmt := `SELECT id, course_resources, created_at, last_updated FROM courses WHERE id = $1`
+	stmt := `SELECT id, course_resources, created_at, last_updated FROM courses WHERE id = $1 AND user_id = $2`
 
 	var data []byte
 
-	err = tx.QueryRow(ctx, stmt, id).Scan(&course.ID, &data, &course.Created, &course.LastUpdated)
+	err = tx.QueryRow(ctx, stmt, id, userId).Scan(&course.ID, &data, &course.Created, &course.LastUpdated)
 
 	if err != nil {
 		return CourseResponse{}, err
@@ -87,7 +87,7 @@ func (m *CourseModel) Get(ctx context.Context, id int) (course CourseResponse, e
 	return course, nil
 }
 
-func (m *CourseModel) List(ctx context.Context) (courses []CoursesListResponse, err error) {
+func (m *CourseModel) List(ctx context.Context, userId int) (courses []CoursesListResponse, err error) {
 	tx, err := m.DB.Begin(ctx)
 
 	if err != nil {
@@ -96,9 +96,9 @@ func (m *CourseModel) List(ctx context.Context) (courses []CoursesListResponse, 
 
 	defer tx.Rollback(ctx)
 
-	stmt := `SELECT id, course_resources->'name', created_at, last_updated FROM courses`
+	stmt := `SELECT id, course_resources->'name', created_at, last_updated FROM courses WHERE user_id = $1`
 
-	rows, err := tx.Query(ctx, stmt)
+	rows, err := tx.Query(ctx, stmt, userId)
 
 	if err != nil {
 		return nil, err
@@ -126,7 +126,7 @@ func (m *CourseModel) List(ctx context.Context) (courses []CoursesListResponse, 
 	return courses, nil
 }
 
-func (m *CourseModel) Delete(ctx context.Context, id int) error {
+func (m *CourseModel) Delete(ctx context.Context, id int, userId int) error {
 	tx, err := m.DB.Begin(ctx)
 
 	if err != nil {
@@ -135,9 +135,9 @@ func (m *CourseModel) Delete(ctx context.Context, id int) error {
 
 	defer tx.Rollback(ctx)
 
-	stmt := `DELETE FROM courses WHERE id = $1`
+	stmt := `DELETE FROM courses WHERE id = $1 AND user_id = $2`
 
-	_, err = tx.Exec(ctx, stmt, id)
+	_, err = tx.Exec(ctx, stmt, id, userId)
 
 	if err != nil {
 		return err
@@ -146,7 +146,7 @@ func (m *CourseModel) Delete(ctx context.Context, id int) error {
 	return tx.Commit(ctx)
 }
 
-func (m *CourseModel) Update(ctx context.Context, course *Course, id int) (updatedId int, err error) {
+func (m *CourseModel) Update(ctx context.Context, course *Course, id int, userId int) (updatedId int, err error) {
 	tx, err := m.DB.Begin(ctx)
 
 	if err != nil {
@@ -157,7 +157,8 @@ func (m *CourseModel) Update(ctx context.Context, course *Course, id int) (updat
 
 	stmt := `UPDATE courses
 			 SET course_resources = $1, last_updated = current_timestamp
-			 WHERE id = $2 RETURNING id`
+			 WHERE id = $2 AND user_id = $3
+			 RETURNING id`
 
 	courseResourcesJson, err := json.Marshal(course)
 
@@ -165,7 +166,7 @@ func (m *CourseModel) Update(ctx context.Context, course *Course, id int) (updat
 		return 0, err
 	}
 
-	err = tx.QueryRow(ctx, stmt, courseResourcesJson, id).Scan(&updatedId)
+	err = tx.QueryRow(ctx, stmt, courseResourcesJson, id, userId).Scan(&updatedId)
 
 	if err != nil {
 		return 0, err

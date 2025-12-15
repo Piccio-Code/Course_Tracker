@@ -7,9 +7,9 @@ import (
 	"github.com/ajg/form"
 )
 
-type AuthenticatedUserKey string
+type CurrentUserId string
 
-const AuthKey = AuthenticatedUserKey("AuthenticatedUserKey")
+const CurrentUserIdKey = CurrentUserId("AuthenticatedUserKey")
 const AuthenticatedUserId = "AuthenticatedUserId"
 
 type CourseForm struct {
@@ -45,14 +45,4 @@ func (app *Application) GetUserFrom(r *http.Request) (user UserForm, err error) 
 	}
 
 	return user, nil
-}
-
-func (app *Application) IsAuthenticated(r *http.Request) bool {
-	isAuth, ok := r.Context().Value(AuthKey).(bool)
-
-	if !ok {
-		return false
-	}
-
-	return isAuth
 }
