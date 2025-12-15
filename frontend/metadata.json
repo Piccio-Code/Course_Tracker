@@ -1,0 +1,5 @@
+{
+  "name": "Go Course Platform",
+  "description": "A premium dark-mode course viewing interface for learning Go, featuring an integrated AI tutor powered by Gemini.",
+  "requestFramePermissions": []
+}
