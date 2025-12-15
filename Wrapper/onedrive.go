@@ -163,7 +163,7 @@ func (o *Onedrive) GetPart(folder models.DriveItemable) (subParts []CoursePart, 
 
 	for _, item := range folderContent {
 
-		isFile := item.GetFile() != nil
+		isVideo := item.GetVideo() != nil
 
 		isFolder := item.GetFolder() != nil
 
@@ -178,12 +178,8 @@ func (o *Onedrive) GetPart(folder models.DriveItemable) (subParts []CoursePart, 
 			totalDuration += subFilesDuration
 		}
 
-		if isFile {
+		if isVideo {
 			courseFile := GetCourseFile(item)
-
-			if courseFile.Format == "vtt" {
-				continue
-			}
 
 			partFiles = append(partFiles, courseFile)
 			totalDuration += courseFile.Duration
