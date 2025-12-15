@@ -1,10 +1,9 @@
 package main
 
 import (
-	"net/http"
-
 	. "github.com/Piccio-Code/Course_Tracker/Wrapper"
 	"github.com/ajg/form"
+	"net/http"
 )
 
 type CurrentUserId string
