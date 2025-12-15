@@ -1,7 +1,7 @@
 -- +goose Up
 -- +goose StatementBegin
 CREATE TABLE IF NOT EXISTS users (
-    ID serial NOT NULL,
+    ID serial PRIMARY KEY NOT NULL,
     Username varchar(255) NOT NULL UNIQUE,
     Email varchar(255) NOT NULL UNIQUE,
     Password varchar(255) NOT NULL
