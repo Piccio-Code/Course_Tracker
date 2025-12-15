@@ -8,7 +8,7 @@ import (
 func (app *Application) routes() http.Handler {
 	mux := http.NewServeMux()
 
-	standardMiddleware := alice.New(app.SessionManager.LoadAndSave, app.Logger, app.enableCORS)
+	standardMiddleware := alice.New(app.SecureHeaders, app.SessionManager.LoadAndSave, app.Logger, app.enableCORS)
 	protect := alice.New(app.RequireAuthentication)
 
 	mux.Handle("POST /courses", protect.ThenFunc(app.CreateCourse))
