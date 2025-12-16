@@ -17,7 +17,7 @@ const toFormData = (data: Record<string, string>) => {
 const apiFetch = async <T>(endpoint: string, options: RequestInit = {}): Promise<T> => {
   const config = {
     ...options,
-    credentials: 'include' as RequestCredentials, // Critical for cookie-based sessions
+    credentials: 'include' as RequestCredentials,
   };
 
   const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
@@ -48,11 +48,11 @@ export const api = {
     });
   },
 
-  login: (data: { username?: string; email: string; password: string }) => {
+  login: (data: { username: string; email: string; password: string }) => {
     return apiFetch<string>('/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: toFormData({ ...data, username: data.username || '' }),
+      body: toFormData(data),
     });
   },
 

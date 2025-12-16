@@ -19,8 +19,8 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onNavigateToSignu
     setError('');
     setIsLoading(true);
 
-    if (!email.trim() || !password.trim()) {
-      setError('Email and password are required.');
+    if (!username.trim() || !email.trim() || !password.trim()) {
+      setError('Username, email and password are required.');
       setIsLoading(false);
       return;
     }
@@ -66,7 +66,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onNavigateToSignu
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-1">
-              <label className="text-xs font-medium text-gray-400 uppercase tracking-wider ml-1">Username (Optional)</label>
+              <label className="text-xs font-medium text-gray-400 uppercase tracking-wider ml-1">Username</label>
               <div className="relative group">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <User size={16} className="text-gray-500 group-focus-within:text-purple-400 transition-colors" />
@@ -77,6 +77,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onNavigateToSignu
                   onChange={(e) => setUsername(e.target.value)}
                   className="w-full bg-[#0d1117]/50 border border-gray-700 text-white text-sm rounded-xl py-3 pl-10 pr-4 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all placeholder-gray-600"
                   placeholder="jdoe"
+                  required
                 />
               </div>
             </div>
