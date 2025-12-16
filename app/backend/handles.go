@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	wrapper "github.com/Piccio-Code/Course_Tracker/Wrapper"
 	. "github.com/Piccio-Code/Course_Tracker/app/models"
 	"net/http"
 	"strconv"
@@ -69,30 +68,43 @@ func (app *Application) Login(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *Application) Logout(w http.ResponseWriter, r *http.Request) {
+	err := app.SessionManager.RenewToken(r.Context())
+
+	if err != nil {
+		app.ErrorLog.Println(err)
+		http.Error(w, "Error renewing the toke", http.StatusInternalServerError)
+		return
+	}
 	app.SessionManager.PopInt(r.Context(), AuthenticatedUserId)
 
 	fmt.Fprintln(w, "Successfully logout")
 }
 
-func (app *Application) CreateCourseDemo(w http.ResponseWriter, r *http.Request) {
-
-	userId, ok := r.Context().Value(CurrentUserIdKey).(int)
+func (app *Application) GetUser(w http.ResponseWriter, r *http.Request) {
+	id, ok := r.Context().Value(CurrentUserIdKey).(int)
 
 	if !ok {
 		http.Error(w, "Error parsing the User id", http.StatusBadRequest)
 		return
 	}
 
-	id, err := app.CourseModel.Insert(r.Context(), &wrapper.Course{Name: "test", Duration: 10}, userId)
+	user, err := app.UserModel.GetId(r.Context(), id)
 
 	if err != nil {
 		app.ErrorLog.Println(err)
-		http.Error(w, "Error inserting the course", http.StatusBadRequest)
+		http.Error(w, "Error retrieving the User", http.StatusBadRequest)
 		return
 	}
 
-	fmt.Fprintf(w, "ID of inserted course: %d", id)
+	pretty, err := json.MarshalIndent(user, " ", "\t")
 
+	if err != nil {
+		app.ErrorLog.Println(err)
+		http.Error(w, "Error encoding the user to JSON", http.StatusBadRequest)
+		return
+	}
+
+	fmt.Fprintln(w, string(pretty))
 }
 
 func (app *Application) CreateCourse(w http.ResponseWriter, r *http.Request) {

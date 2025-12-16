@@ -12,10 +12,10 @@ type UserModel struct {
 }
 
 type User struct {
-	ID       int
-	Username string
-	Email    string
-	Password string
+	ID       int    `json:"-"`
+	Username string `json:"username"`
+	Email    string `json:"email"`
+	Password string `json:"-"`
 }
 
 func (u *UserModel) Insert(ctx context.Context, user User) (id int, err error) {
@@ -45,6 +45,26 @@ func (u *UserModel) Insert(ctx context.Context, user User) (id int, err error) {
 	}
 
 	return id, nil
+}
+
+func (u *UserModel) GetId(ctx context.Context, id int) (user User, err error) {
+	tx, err := u.DB.Begin(ctx)
+
+	if err != nil {
+		return User{}, err
+	}
+
+	defer tx.Rollback(ctx)
+
+	stmt := `SELECT username, email FROM users WHERE id=$1`
+
+	err = tx.QueryRow(ctx, stmt, id).Scan(&user.Username, &user.Email)
+
+	if err != nil {
+		return User{}, err
+	}
+
+	return user, nil
 }
 
 func (u *UserModel) Get(ctx context.Context, user User) (id int, err error) {

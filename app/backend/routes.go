@@ -11,8 +11,13 @@ func (app *Application) routes() http.Handler {
 	standardMiddleware := alice.New(app.SecureHeaders, app.SessionManager.LoadAndSave, app.Logger, app.enableCORS)
 	protect := alice.New(app.RequireAuthentication)
 
+	mux.HandleFunc("POST /auth/signup", app.Signup)
+	mux.HandleFunc("POST /auth/login", app.Login)
+	mux.Handle("POST /auth/logout", protect.ThenFunc(app.Logout))
+
+	mux.Handle("GET /user", protect.ThenFunc(app.GetUser))
+
 	mux.Handle("POST /courses", protect.ThenFunc(app.CreateCourse))
-	mux.Handle("POST /courses/demo", protect.ThenFunc(app.CreateCourseDemo))
 
 	mux.Handle("GET /courses", protect.ThenFunc(app.ViewCourses))
 	mux.Handle("GET /courses/{id}", protect.ThenFunc(app.ViewCourse))
@@ -20,10 +25,6 @@ func (app *Application) routes() http.Handler {
 	mux.Handle("PUT /courses/{id}", protect.ThenFunc(app.UpdateCourse))
 
 	mux.Handle("DELETE /courses/{id}", protect.ThenFunc(app.DeleteCourse))
-
-	mux.HandleFunc("POST /auth/signup", app.Signup)
-	mux.HandleFunc("POST /auth/login", app.Login)
-	mux.Handle("POST /auth/logout", protect.ThenFunc(app.Logout))
 
 	return standardMiddleware.Then(mux)
 }
