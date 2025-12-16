@@ -16,6 +16,7 @@ func (app *Application) routes() http.Handler {
 	mux.Handle("POST /auth/logout", protect.ThenFunc(app.Logout))
 
 	mux.Handle("GET /user", protect.ThenFunc(app.GetUser))
+	mux.Handle("PUT /user", protect.ThenFunc(app.ModifyUser))
 
 	mux.Handle("POST /courses", protect.ThenFunc(app.CreateCourse))
 

@@ -22,6 +22,11 @@ type UserForm struct {
 	Password string `form:"password"`
 }
 
+type UserModifyForm struct {
+	Username string `form:"username"`
+	Email    string `form:"email"`
+}
+
 func (app *Application) GetCourseFormLink(r *http.Request) (course *Course, err error) {
 	decoder := form.NewDecoder(r.Body)
 
@@ -44,4 +49,15 @@ func (app *Application) GetUserFrom(r *http.Request) (user UserForm, err error) 
 	}
 
 	return user, nil
+}
+
+func (app *Application) GetUserModifyForm(r *http.Request) (newUserOptions UserModifyForm, err error) {
+	d := form.NewDecoder(r.Body)
+
+	if err := d.Decode(&newUserOptions); err != nil {
+		app.ErrorLog.Println(err)
+		return UserModifyForm{}, err
+	}
+
+	return newUserOptions, nil
 }

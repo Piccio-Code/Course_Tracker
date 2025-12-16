@@ -107,6 +107,33 @@ func (app *Application) GetUser(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, string(pretty))
 }
 
+func (app *Application) ModifyUser(w http.ResponseWriter, r *http.Request) {
+	id, ok := r.Context().Value(CurrentUserIdKey).(int)
+
+	if !ok {
+		http.Error(w, "Error parsing the User id", http.StatusBadRequest)
+		return
+	}
+
+	newUserOptions, err := app.GetUserModifyForm(r)
+
+	if err != nil {
+		app.ErrorLog.Println(err)
+		http.Error(w, "Error parsing the body", http.StatusBadRequest)
+		return
+	}
+
+	err = app.UserModel.Modify(r.Context(), newUserOptions.Username, newUserOptions.Email, id)
+
+	if err != nil {
+		app.ErrorLog.Println(err)
+		http.Error(w, "Error modifying the user", http.StatusBadRequest)
+		return
+	}
+
+	http.Redirect(w, r, "/user", http.StatusSeeOther)
+}
+
 func (app *Application) CreateCourse(w http.ResponseWriter, r *http.Request) {
 
 	course, err := app.GetCourseFormLink(r)
@@ -132,7 +159,7 @@ func (app *Application) CreateCourse(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Fprintf(w, "ID of inserted course: %d", id)
+	http.Redirect(w, r, fmt.Sprintf("/courses/%d", id), http.StatusSeeOther)
 }
 
 func (app *Application) ViewCourses(w http.ResponseWriter, r *http.Request) {
@@ -200,6 +227,7 @@ func (app *Application) ViewCourse(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	w.WriteHeader(http.StatusOK)
 	fmt.Fprintln(w, string(pretty))
 }
 

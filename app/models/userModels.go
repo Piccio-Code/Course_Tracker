@@ -96,6 +96,27 @@ func (u *UserModel) Get(ctx context.Context, user User) (id int, err error) {
 	return id, nil
 }
 
+func (u *UserModel) Modify(ctx context.Context, username, email string, id int) error {
+
+	tx, err := u.DB.Begin(ctx)
+
+	if err != nil {
+		return err
+	}
+
+	defer tx.Rollback(ctx)
+
+	stmt := `UPDATE users SET username = $1, email = $2 WHERE id = $3`
+
+	_, err = tx.Exec(ctx, stmt, username, email, id)
+
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit(ctx)
+}
+
 func (u *UserModel) Exist(ctx context.Context, id int) (exist bool, err error) {
 
 	tx, err := u.DB.Begin(ctx)
