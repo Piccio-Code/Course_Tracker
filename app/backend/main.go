@@ -28,7 +28,6 @@ type Application struct {
 func main() {
 
 	onedriveFlag := flag.Bool("onedrive", false, "This flag will connect with onedrive API")
-	secureFlag := flag.Bool("deploy", false, "This flag will set the secure cookie to false")
 
 	flag.Parse()
 
@@ -65,7 +64,8 @@ func main() {
 	sessionManager.Lifetime = 12 * time.Hour
 	sessionManager.Cookie.HttpOnly = true
 	sessionManager.Cookie.Persist = true
-	sessionManager.Cookie.Secure = *secureFlag
+	sessionManager.Cookie.Secure = true
+	sessionManager.Cookie.Domain = ""
 
 	app := Application{
 		Onedrive:       onedrive,
