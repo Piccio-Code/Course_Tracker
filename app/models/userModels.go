@@ -57,7 +57,7 @@ func (u *UserModel) Get(ctx context.Context, user User) (id int, err error) {
 
 	defer tx.Rollback(ctx)
 
-	stmt := `SELECT id, password FROM users WHERE (email=$1 OR username=$2)`
+	stmt := `SELECT id, password FROM users WHERE (email=$1 AND username=$2)`
 
 	var hashedPassword []byte
 
