@@ -1,6 +1,6 @@
 import { API_CourseResponse, API_CoursesListResponse, UserProfile } from '../types.ts';
 
-const API_BASE_URL = 'http://192.168.1.4:8080'; // Relative path since usually hosted on same origin or proxied
+const API_BASE_URL = 'http://localhost:8080'; // Relative path since usually hosted on same origin or proxied
 
 // Helper to handle x-www-form-urlencoded bodies
 const toFormData = (data: Record<string, string>) => {
