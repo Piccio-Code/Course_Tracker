@@ -68,6 +68,7 @@ func (app *Application) Login(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *Application) Logout(w http.ResponseWriter, r *http.Request) {
+	app.SessionManager.Pop(r.Context(), AuthenticatedUserId)
 	err := app.SessionManager.RenewToken(r.Context())
 
 	if err != nil {
@@ -75,7 +76,6 @@ func (app *Application) Logout(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Error renewing the toke", http.StatusInternalServerError)
 		return
 	}
-	app.SessionManager.PopInt(r.Context(), AuthenticatedUserId)
 
 	fmt.Fprintln(w, "Successfully logout")
 }

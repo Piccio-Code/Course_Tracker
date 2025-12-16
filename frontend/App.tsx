@@ -43,12 +43,20 @@ const App: React.FC = () => {
   const checkAuth = async () => {
     try {
       const userData = await api.getUser();
+      
+      // Strict validation: Ensure userData is an object and has required fields.
+      // If the API returns HTML (string) or empty object for unauth users, this catches it.
+      if (!userData || typeof userData !== 'object' || !('username' in userData) || !('email' in userData)) {
+         throw new Error("Invalid user session data");
+      }
+
       setUser(userData);
       await fetchCourses(); // Fetch courses if auth is good
       setViewMode('dashboard');
     } catch (error) {
-      // If error (401/400), user is not logged in
-      console.log("Not authenticated", error);
+      // If error (401/400/Invalid Data), user is not logged in
+      console.log("Not authenticated or invalid session:", error);
+      setUser(null);
       setViewMode('login');
     } finally {
       setIsLoadingAuth(false);
@@ -98,8 +106,6 @@ const App: React.FC = () => {
         });
         // Refresh list
         await fetchCourses();
-        // Optimistically add to UI or just rely on fetchCourses
-        // (fetchCourses is cleaner source of truth)
     } catch (e) {
         console.error("Failed to create course", e);
         alert("Failed to create course. Please check the URL.");
@@ -118,11 +124,13 @@ const App: React.FC = () => {
   const handleLogout = async () => {
     try {
       await api.logout();
+    } catch (e) {
+      console.error("Logout failed", e);
+    } finally {
+      // Always clear local state even if server logout fails
       setUser(null);
       setCourses([]);
       setViewMode('login');
-    } catch (e) {
-      console.error("Logout failed", e);
     }
   };
 
@@ -167,27 +175,16 @@ const App: React.FC = () => {
     }
   ], []);
 
-  const renderNavigation = () => (
-    user ? (
-        <CardNav
-            items={navItems}
-            logoText="Course view"
-            baseColor="#000000"
-            menuColor="#ffffff"
-            buttonBgColor="#7c3aed"
-            buttonTextColor="#fff"
-            ctaLabel="Premium"
-            className="font-sans"
-        />
-    ) : null
-  );
+  // Use a boolean to check if we need navigation to show
+  // This allows us to keep CardNav mounted between Dashboard/Profile switches
+  const showNavigation = user && (viewMode === 'dashboard' || viewMode === 'profile');
 
   // --- Render Logic ---
 
   const renderContent = () => {
     if (isLoadingAuth) {
       return (
-          <div className="flex h-full w-full items-center justify-center">
+          <div className="flex h-full w-full items-center justify-center relative z-20">
               <Loader2 className="animate-spin text-purple-500" size={48} />
           </div>
       );
@@ -196,29 +193,23 @@ const App: React.FC = () => {
     switch (viewMode) {
       case 'dashboard':
         return (
-          <div className="relative w-full h-full">
-              {renderNavigation()}
-              <div className="pt-24 h-full flex flex-col">
-                  <CourseDashboard 
-                      courses={courses} 
-                      onSelectCourse={handleSelectCourse} 
-                      onAddCourse={handleAddCourse}
-                      onNavigateToProfile={() => setViewMode('profile')}
-                  />
-              </div>
+          <div className="pt-24 h-full flex flex-col relative z-10">
+              <CourseDashboard 
+                  courses={courses} 
+                  onSelectCourse={handleSelectCourse} 
+                  onAddCourse={handleAddCourse}
+                  onNavigateToProfile={() => setViewMode('profile')}
+              />
           </div>
         );
       case 'profile':
         return (
-           <div className="relative w-full h-full">
-             {renderNavigation()}
-             <div className="pt-24 h-full flex flex-col">
+           <div className="pt-24 h-full flex flex-col relative z-10">
                <ProfilePage 
                   user={user || { username: 'Guest', email: 'guest@example.com' }}
                   onUpdateUser={(updatedUser) => setUser(updatedUser)}
                   onBack={() => setViewMode('dashboard')}
                />
-             </div>
            </div>
         );
       case 'player':
@@ -330,7 +321,7 @@ const App: React.FC = () => {
         );
       case 'login':
         return (
-          <div className="w-full h-full flex items-center justify-center px-4">
+          <div className="w-full h-full flex items-center justify-center px-4 relative z-10">
             <LoginPage 
                 onLoginSuccess={(userData) => {
                     setUser(userData);
@@ -343,14 +334,9 @@ const App: React.FC = () => {
         );
       case 'signup':
         return (
-          <div className="w-full h-full flex items-center justify-center px-4">
+          <div className="w-full h-full flex items-center justify-center px-4 relative z-10">
             <SignupPage
                 onSignupSuccess={(userData) => {
-                    // Signup success usually means account created, 
-                    // user might need to login now or is auto logged in depending on backend.
-                    // Assuming user needs to login or we treat them as logged in? 
-                    // API doc doesn't say /auth/signup returns session cookie, 
-                    // but often it does. Let's try to load user. If fail, go to login.
                     checkAuth();
                 }}
                 onNavigateToLogin={() => setViewMode('login')}
@@ -378,6 +364,22 @@ const App: React.FC = () => {
             parallax={true}
         />
       </div>
+
+      {/* Persistent Navigation for Dashboard/Profile */}
+      {showNavigation && (
+          <div className="absolute top-0 left-0 w-full z-50">
+             <CardNav
+                items={navItems}
+                logoText="Course view"
+                baseColor="#000000"
+                menuColor="#ffffff"
+                buttonBgColor="#7c3aed"
+                buttonTextColor="#fff"
+                ctaLabel="Premium"
+                className="font-sans"
+            />
+          </div>
+      )}
 
       {/* Main Content Area */}
       <div className="relative z-10 w-full h-full">

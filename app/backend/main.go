@@ -10,6 +10,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
+	"github.com/rs/cors"
 	"log"
 	"net/http"
 	"os"
@@ -23,12 +24,13 @@ type Application struct {
 	CourseModel    *CourseModel
 	UserModel      *UserModel
 	SessionManager *scs.SessionManager
+	Cors           *cors.Cors
 }
 
 func main() {
 
 	onedriveFlag := flag.Bool("onedrive", false, "This flag will connect with onedrive API")
-	productionFlag := flag.Bool("product", false, "This flag will enable secure cookie only sent by HTTPS")
+	//productionFlag := flag.Bool("product", false, "This flag will enable secure cookie only sent by HTTPS")
 
 	flag.Parse()
 
@@ -65,8 +67,15 @@ func main() {
 	sessionManager.Lifetime = 12 * time.Hour
 	sessionManager.Cookie.HttpOnly = true
 	sessionManager.Cookie.Persist = true
-	sessionManager.Cookie.Secure = !*productionFlag
-	sessionManager.Cookie.Domain = ""
+	sessionManager.Cookie.Secure = false                  // allow HTTP
+	sessionManager.Cookie.SameSite = http.SameSiteLaxMode // Lax or None
+	sessionManager.Cookie.Domain = ""                     // localhost doesn’t need a domain
+
+	corsOptions := cors.Options{
+		AllowedOrigins:      []string{"http://192.168.1.3:3000", "http://localhost:3000"},
+		AllowCredentials:    true,
+		AllowPrivateNetwork: true,
+	}
 
 	app := Application{
 		Onedrive:       onedrive,
@@ -75,6 +84,7 @@ func main() {
 		CourseModel:    &CourseModel{DB: dbPool},
 		UserModel:      &UserModel{DB: dbPool},
 		SessionManager: sessionManager,
+		Cors:           cors.New(corsOptions),
 	}
 
 	srv := http.Server{
