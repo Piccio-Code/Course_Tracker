@@ -64,7 +64,6 @@ func main() {
 	sessionManager.Lifetime = 12 * time.Hour
 	sessionManager.Cookie.HttpOnly = true
 	sessionManager.Cookie.Persist = true
-	sessionManager.Cookie.SameSite = http.SameSiteStrictMode
 	sessionManager.Cookie.Secure = true
 
 	app := Application{
