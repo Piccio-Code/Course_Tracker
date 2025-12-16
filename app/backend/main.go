@@ -28,6 +28,7 @@ type Application struct {
 func main() {
 
 	onedriveFlag := flag.Bool("onedrive", false, "This flag will connect with onedrive API")
+	productionFlag := flag.Bool("product", false, "This flag will enable secure cookie only sent by HTTPS")
 
 	flag.Parse()
 
@@ -64,7 +65,7 @@ func main() {
 	sessionManager.Lifetime = 12 * time.Hour
 	sessionManager.Cookie.HttpOnly = true
 	sessionManager.Cookie.Persist = true
-	sessionManager.Cookie.Secure = true
+	sessionManager.Cookie.Secure = !*productionFlag
 	sessionManager.Cookie.Domain = ""
 
 	app := Application{
