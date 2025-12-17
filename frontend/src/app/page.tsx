@@ -1,23 +1,12 @@
 "use client";
 
-import LightPillar from "@/components/LightPillar";
+import PageBackground from "@/components/PageBackground";
 import Link from "next/link";
 
 export default function Home() {
   return (
     <div className="relative min-h-screen overflow-hidden bg-black">
-      {/* LightPillar Background */}
-      <LightPillar 
-        topColor="#5227FF"
-        bottomColor="#FF9FFC"
-        intensity={1.0}
-        rotationSpeed={0.3}
-        glowAmount={0.005}
-        pillarWidth={3.0}
-        pillarHeight={0.4}
-        noiseIntensity={0.5}
-        mixBlendMode="screen"
-      />
+      <PageBackground />
       
       {/* Content */}
       <main className="relative z-10 flex min-h-screen flex-col items-center justify-center px-6 py-24">

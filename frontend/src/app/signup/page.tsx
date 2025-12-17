@@ -1,48 +1,51 @@
 "use client";
 
-import LightPillar from "@/components/LightPillar";
+import PageBackground from "@/components/PageBackground";
 import RotatingText from "@/components/RotatingText";
+import { signup } from "@/lib/api";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 export default function Signup() {
-  const [name, setName] = useState("");
+  const router = useRouter();
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [acceptTerms, setAcceptTerms] = useState(false);
+  const [error, setError] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError("");
+
     if (password !== confirmPassword) {
-      alert("Le password non coincidono");
+      setError("Le password non coincidono");
       return;
     }
     if (!acceptTerms) {
-      alert("Devi accettare i termini e condizioni");
+      setError("Devi accettare i termini e condizioni");
       return;
     }
+
     setIsLoading(true);
-    // TODO: Implementare signup
-    console.log("Signup:", { name, email, password });
-    setTimeout(() => setIsLoading(false), 1000);
+
+    const result = await signup(username, email, password);
+
+    if (result.success) {
+      router.push("/dashboard");
+    } else {
+      setError(result.error || "Errore durante la registrazione");
+    }
+
+    setIsLoading(false);
   };
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-black">
-      {/* LightPillar Background */}
-      <LightPillar 
-        topColor="#5227FF"
-        bottomColor="#FF9FFC"
-        intensity={0.8}
-        rotationSpeed={0.2}
-        glowAmount={0.004}
-        pillarWidth={2.5}
-        pillarHeight={0.3}
-        noiseIntensity={0.4}
-        mixBlendMode="screen"
-      />
+      <PageBackground />
       
       {/* Content */}
       <main className="relative z-10 flex min-h-screen flex-col items-center justify-center px-6 py-12">
@@ -51,16 +54,16 @@ export default function Signup() {
           <h1 className="text-3xl font-bold tracking-tight text-white drop-shadow-lg md:text-4xl flex items-center justify-center gap-x-2">
             <span>Course</span>
             <RotatingText
-              texts={["Flow", "Path", "Pulse", "Hub"]}
+              texts={["Flow", "Hub", "View"]}
               mainClassName="px-2 bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white overflow-hidden py-1 justify-center rounded-lg"
               splitLevelClassName="overflow-hidden pb-0.5"
               staggerFrom="last"
-              staggerDuration={0.025}
+              staggerDuration={0.03}
               initial={{ y: "100%" }}
               animate={{ y: 0 }}
               exit={{ y: "-120%" }}
               animatePresenceInitial={true}
-              transition={{ type: "spring", damping: 30, stiffness: 400 }}
+              transition={{ type: "spring", damping: 20, stiffness: 150, mass: 1 }}
               rotationInterval={2500}
             />
           </h1>
@@ -77,16 +80,22 @@ export default function Signup() {
             </p>
             
             <form onSubmit={handleSubmit} className="space-y-4">
+              {error && (
+                <div className="rounded-xl bg-red-500/10 border border-red-500/20 px-4 py-3 text-red-400 text-sm">
+                  {error}
+                </div>
+              )}
+              
               <div>
-                <label htmlFor="name" className="block text-sm font-medium text-white/80 mb-2">
-                  Nome completo
+                <label htmlFor="username" className="block text-sm font-medium text-white/80 mb-2">
+                  Username
                 </label>
                 <input
-                  id="name"
+                  id="username"
                   type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Mario Rossi"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="mario_rossi"
                   required
                   className="w-full rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-violet-500/50 transition-all"
                 />
