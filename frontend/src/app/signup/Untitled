@@ -1,0 +1,11 @@
+              texts={["Flow", "Path", "Pulse", "Hub"]}
+              mainClassName="px-2 bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white overflow-hidden py-1 justify-center rounded-lg"
+              splitLevelClassName="overflow-hidden pb-0.5"
+              staggerFrom="last"
+              staggerDuration={0.025}
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "-120%" }}
+              animatePresenceInitial={true}
+              transition={{ type: "spring", damping: 30, stiffness: 400 }}
+              rotationInterval={2500}
