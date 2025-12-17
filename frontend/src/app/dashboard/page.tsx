@@ -28,15 +28,17 @@ const courseColors = [
 interface CourseCardProps {
   course: CoursesListResponse;
   index: number;
+  onClick: () => void;
 }
 
-function CourseCard({ course, index }: CourseCardProps) {
+function CourseCard({ course, index, onClick }: CourseCardProps) {
   const colorSet = courseColors[index % courseColors.length];
 
   return (
     <div
       className="group relative animate-in fade-in slide-in-from-bottom-4"
       style={{ animationDelay: `${index * 100}ms`, animationFillMode: "both" }}
+      onClick={onClick}
     >
       {/* Glow effect */}
       <div
@@ -629,6 +631,7 @@ export default function Dashboard() {
     return (
       <div className="relative min-h-screen overflow-hidden bg-black">
         <PageBackground />
+        <div className="absolute inset-0 bg-black/50 backdrop-blur-xl" />
         <main className="relative z-10 flex min-h-screen items-center justify-center">
           <div className="flex flex-col items-center gap-4 text-white">
             {/* Animated loader */}
@@ -650,6 +653,8 @@ export default function Dashboard() {
   return (
     <div className="relative min-h-screen overflow-hidden bg-black">
       <PageBackground />
+      {/* Strong blur overlay */}
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-xl" />
 
       <main className="relative z-10 min-h-screen px-6 py-8">
         {/* Header */}
@@ -800,7 +805,12 @@ export default function Dashboard() {
                 <ErrorState onRetry={handleRefresh} />
               ) : courses.length > 0 ? (
                 courses.map((course, index) => (
-                  <CourseCard key={course.id} course={course} index={index} />
+                  <CourseCard
+                    key={course.id}
+                    course={course}
+                    index={index}
+                    onClick={() => router.push(`/courses/${course.id}`)}
+                  />
                 ))
               ) : isLoadingCourses ? (
                 // Loading skeleton

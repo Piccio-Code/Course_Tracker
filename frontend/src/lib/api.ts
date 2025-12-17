@@ -1,6 +1,6 @@
 // Configurazione API - Modifica qui l'URL base del backend
 export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://10.248.48.196:8080";
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
 // ============================================================================
 // INTERFACES - Matching Go structures from Wrapper/onedrive.go
