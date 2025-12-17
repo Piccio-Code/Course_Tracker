@@ -5,6 +5,7 @@ import {
   getUser,
   logout,
   getCourses,
+  createCourse,
   formatDuration,
   formatDate,
   timeAgo,
@@ -131,7 +132,11 @@ function CourseCard({ course, index }: CourseCardProps) {
   );
 }
 
-function EmptyState() {
+interface EmptyStateProps {
+  onAddCourse: () => void;
+}
+
+function EmptyState({ onAddCourse }: EmptyStateProps) {
   return (
     <div className="col-span-full flex flex-col items-center justify-center py-20">
       <div className="relative mb-8">
@@ -171,7 +176,10 @@ function EmptyState() {
         Non hai ancora aggiunto nessun corso. Inizia ad organizzare il tuo
         percorso di apprendimento!
       </p>
-      <button className="px-6 py-3 rounded-xl bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white font-medium hover:shadow-lg hover:shadow-violet-500/25 transition-all hover:scale-105">
+      <button
+        onClick={onAddCourse}
+        className="px-6 py-3 rounded-xl bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white font-medium hover:shadow-lg hover:shadow-violet-500/25 transition-all hover:scale-105"
+      >
         Aggiungi il tuo primo corso
       </button>
     </div>
@@ -232,6 +240,313 @@ function ErrorState({ onRetry }: ErrorStateProps) {
   );
 }
 
+// Modal per creare un nuovo corso
+interface NewCourseModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSuccess: () => void;
+}
+
+function NewCourseModal({ isOpen, onClose, onSuccess }: NewCourseModalProps) {
+  const [link, setLink] = useState("");
+  const [name, setName] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+
+    if (!link.trim()) {
+      setError("Inserisci un link OneDrive valido");
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      console.log("[NewCourseModal] Creating course...", { link, name });
+      const result = await createCourse(link.trim(), name.trim() || undefined);
+
+      if (result.success) {
+        console.log("[NewCourseModal] Course created successfully:", result.data);
+        setLink("");
+        setName("");
+        onSuccess();
+        onClose();
+      } else {
+        console.error("[NewCourseModal] Error creating course:", result.error);
+        setError(result.error || "Errore durante la creazione del corso");
+      }
+    } catch (err) {
+      console.error("[NewCourseModal] Exception:", err);
+      setError("Errore imprevisto durante la creazione del corso");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleClose = () => {
+    if (!isSubmitting) {
+      setLink("");
+      setName("");
+      setError(null);
+      onClose();
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      {/* Backdrop */}
+      <div
+        className="absolute inset-0 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200"
+        onClick={handleClose}
+      />
+
+      {/* Modal */}
+      <div className="relative w-full max-w-lg mx-4 animate-in zoom-in-95 fade-in duration-200">
+        {/* Glow effect */}
+        <div className="absolute -inset-1 bg-gradient-to-r from-violet-500 to-fuchsia-500 rounded-3xl blur-lg opacity-30" />
+
+        <div className="relative rounded-2xl bg-black/90 border border-white/10 backdrop-blur-xl overflow-hidden">
+          {/* Header */}
+          <div className="flex items-center justify-between p-6 border-b border-white/5">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center">
+                <svg
+                  className="w-5 h-5 text-white"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 4v16m8-8H4"
+                  />
+                </svg>
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-white">Nuovo Corso</h2>
+                <p className="text-sm text-white/50">
+                  Aggiungi un corso da OneDrive
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={handleClose}
+              disabled={isSubmitting}
+              className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-all disabled:opacity-50"
+            >
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+          </div>
+
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="p-6 space-y-5">
+            {/* OneDrive Link */}
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-white/80">
+                Link OneDrive <span className="text-red-400">*</span>
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <svg
+                    className="w-5 h-5 text-white/30"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
+                    />
+                  </svg>
+                </div>
+                <input
+                  type="url"
+                  value={link}
+                  onChange={(e) => setLink(e.target.value)}
+                  placeholder="https://onedrive.live.com/..."
+                  disabled={isSubmitting}
+                  className="w-full pl-12 pr-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/30 focus:outline-none focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 transition-all disabled:opacity-50"
+                />
+              </div>
+              <p className="text-xs text-white/40">
+                Incolla il link condiviso della cartella OneDrive contenente il
+                corso
+              </p>
+            </div>
+
+            {/* Course Name (optional) */}
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-white/80">
+                Nome del corso{" "}
+                <span className="text-white/40 font-normal">(opzionale)</span>
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <svg
+                    className="w-5 h-5 text-white/30"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+                    />
+                  </svg>
+                </div>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Es: React Complete Course"
+                  disabled={isSubmitting}
+                  className="w-full pl-12 pr-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/30 focus:outline-none focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 transition-all disabled:opacity-50"
+                />
+              </div>
+              <p className="text-xs text-white/40">
+                Se non specificato, verrà usato il nome della cartella
+              </p>
+            </div>
+
+            {/* Error message */}
+            {error && (
+              <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20">
+                <div className="flex items-start gap-3">
+                  <svg
+                    className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  <p className="text-sm text-red-400">{error}</p>
+                </div>
+              </div>
+            )}
+
+            {/* Info box */}
+            <div className="p-4 rounded-xl bg-violet-500/10 border border-violet-500/20">
+              <div className="flex items-start gap-3">
+                <svg
+                  className="w-5 h-5 text-violet-400 flex-shrink-0 mt-0.5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+                <div className="text-sm text-violet-300/80">
+                  <p className="font-medium text-violet-300 mb-1">
+                    Come funziona?
+                  </p>
+                  <p>
+                    Il sistema analizzerà la cartella OneDrive e creerà
+                    automaticamente la struttura del corso con tutte le parti e
+                    i video.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center gap-3 pt-2">
+              <button
+                type="button"
+                onClick={handleClose}
+                disabled={isSubmitting}
+                className="flex-1 px-5 py-3 rounded-xl bg-white/5 border border-white/10 text-white/80 font-medium hover:bg-white/10 hover:border-white/20 transition-all disabled:opacity-50"
+              >
+                Annulla
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting || !link.trim()}
+                className="flex-1 px-5 py-3 rounded-xl bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white font-medium hover:shadow-lg hover:shadow-violet-500/25 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {isSubmitting ? (
+                  <>
+                    <svg
+                      className="w-5 h-5 animate-spin"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      />
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      />
+                    </svg>
+                    Creazione in corso...
+                  </>
+                ) : (
+                  <>
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 4v16m8-8H4"
+                      />
+                    </svg>
+                    Crea Corso
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Dashboard() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
@@ -239,6 +554,7 @@ export default function Dashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingCourses, setIsLoadingCourses] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Funzione per caricare i corsi
   const fetchCourses = useCallback(async () => {
@@ -291,6 +607,19 @@ export default function Dashboard() {
   const handleRefresh = async () => {
     console.log("[Dashboard] Refreshing courses...");
     await fetchCourses();
+  };
+
+  const handleOpenModal = () => {
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+  };
+
+  const handleCourseCreated = () => {
+    console.log("[Dashboard] Course created, refreshing list...");
+    fetchCourses();
   };
 
   // Calcola la durata totale di tutti i corsi
@@ -412,26 +741,29 @@ export default function Dashboard() {
                       </p>
                     </div>
                   </div>
-
-                  {/* Add course button */}
-                  <button className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white font-medium hover:shadow-lg hover:shadow-violet-500/25 transition-all hover:scale-105">
-                    <svg
-                      className="w-5 h-5"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M12 4v16m8-8H4"
-                      />
-                    </svg>
-                    Nuovo Corso
-                  </button>
                 </>
               )}
+
+              {/* Add course button - always visible */}
+              <button
+                onClick={handleOpenModal}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white font-medium hover:shadow-lg hover:shadow-violet-500/25 transition-all hover:scale-105"
+              >
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 4v16m8-8H4"
+                  />
+                </svg>
+                Nuovo Corso
+              </button>
             </div>
           </div>
 
@@ -499,12 +831,19 @@ export default function Dashboard() {
                   ))}
                 </>
               ) : (
-                <EmptyState />
+                <EmptyState onAddCourse={handleOpenModal} />
               )}
             </div>
           </div>
         </div>
       </main>
+
+      {/* Modal per nuovo corso */}
+      <NewCourseModal
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        onSuccess={handleCourseCreated}
+      />
     </div>
   );
 }
