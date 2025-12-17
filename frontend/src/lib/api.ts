@@ -1,33 +1,107 @@
 // Configurazione API - Modifica qui l'URL base del backend
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+export const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL || "http://10.248.48.196:8080";
 
-// Tipo per l'utente
+// ============================================================================
+// INTERFACES - Matching Go structures from Wrapper/onedrive.go
+// ============================================================================
+
+/**
+ * Rappresenta un singolo file del corso
+ * Go struct: CourseFile (Wrapper/onedrive.go)
+ */
+export interface CourseFile {
+  name: string;
+  url: string;
+  format: string;
+  duration: number; // in milliseconds
+}
+
+/**
+ * Rappresenta una parte/sezione del corso (può contenere sotto-parti)
+ * Go struct: CoursePart (Wrapper/onedrive.go)
+ */
+export interface CoursePart {
+  name: string;
+  duration: number;
+  "sub-parts": CoursePart[] | null;
+  files: CourseFile[] | null;
+}
+
+/**
+ * Struttura completa del corso con tutte le risorse
+ * Go struct: Course (Wrapper/onedrive.go)
+ */
+export interface Course {
+  name: string;
+  duration: number;
+  parts: CoursePart[] | null;
+  files: CourseFile[] | null;
+}
+
+// ============================================================================
+// INTERFACES - Matching Go structures from app/models/courseModels.go
+// ============================================================================
+
+/**
+ * Risposta per un singolo corso (GET /courses/{id})
+ * Go struct: CourseResponse (app/models/courseModels.go)
+ */
+export interface CourseResponse {
+  id: number;
+  courseResources: Course;
+  created: string; // ISO date string
+  lastUpdated: string; // ISO date string
+}
+
+/**
+ * Risposta per la lista dei corsi (GET /courses)
+ * Go struct: CoursesListResponse (app/models/courseModels.go)
+ */
+export interface CoursesListResponse {
+  id: number;
+  name: string;
+  duration: number;
+  created: string; // ISO date string
+  lastUpdated: string; // ISO date string
+}
+
+// ============================================================================
+// INTERFACES - Matching Go structures from app/models/userModels.go
+// ============================================================================
+
+/**
+ * Rappresenta l'utente
+ * Go struct: User (app/models/userModels.go)
+ */
 export interface User {
   username: string;
   email: string;
 }
 
-// Verifica se l'utente è autenticato
-export async function getUser(): Promise<User | null> {
-  try {
-    const response = await fetch(`${API_BASE_URL}/user`, {
-      method: "GET",
-      credentials: "include",
-    });
+// ============================================================================
+// API Response Types
+// ============================================================================
 
-    if (!response.ok) {
-      return null;
-    }
-
-    const user: User = await response.json();
-    return user;
-  } catch {
-    return null;
-  }
+export interface ApiResult<T> {
+  success: boolean;
+  data?: T;
+  error?: string;
 }
 
-// Login
-export async function login(username: string, email: string, password: string): Promise<{ success: boolean; error?: string }> {
+// ============================================================================
+// AUTH API - /auth/*
+// ============================================================================
+
+/**
+ * Login utente
+ * POST /auth/login
+ */
+export async function login(
+  username: string,
+  email: string,
+  password: string
+): Promise<ApiResult<void>> {
   try {
     const formData = new URLSearchParams();
     formData.append("username", username);
@@ -50,12 +124,22 @@ export async function login(username: string, email: string, password: string): 
 
     return { success: true };
   } catch (err) {
-    return { success: false, error: err instanceof Error ? err.message : "Errore durante il login" };
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Errore durante il login",
+    };
   }
 }
 
-// Signup
-export async function signup(username: string, email: string, password: string): Promise<{ success: boolean; error?: string }> {
+/**
+ * Registrazione utente
+ * POST /auth/signup
+ */
+export async function signup(
+  username: string,
+  email: string,
+  password: string
+): Promise<ApiResult<void>> {
   try {
     const formData = new URLSearchParams();
     formData.append("username", username);
@@ -73,16 +157,26 @@ export async function signup(username: string, email: string, password: string):
 
     if (!response.ok) {
       const errorText = await response.text();
-      return { success: false, error: errorText || "Errore durante la registrazione" };
+      return {
+        success: false,
+        error: errorText || "Errore durante la registrazione",
+      };
     }
 
     return { success: true };
   } catch (err) {
-    return { success: false, error: err instanceof Error ? err.message : "Errore durante la registrazione" };
+    return {
+      success: false,
+      error:
+        err instanceof Error ? err.message : "Errore durante la registrazione",
+    };
   }
 }
 
-// Logout
+/**
+ * Logout utente
+ * POST /auth/logout (protected)
+ */
 export async function logout(): Promise<boolean> {
   try {
     const response = await fetch(`${API_BASE_URL}/auth/logout`, {
@@ -95,3 +189,378 @@ export async function logout(): Promise<boolean> {
   }
 }
 
+// ============================================================================
+// USER API - /user
+// ============================================================================
+
+/**
+ * Recupera i dati dell'utente autenticato
+ * GET /user (protected)
+ */
+export async function getUser(): Promise<User | null> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/user`, {
+      method: "GET",
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const user: User = await response.json();
+    return user;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Modifica i dati dell'utente
+ * PUT /user (protected)
+ */
+export async function updateUser(
+  username: string,
+  email: string
+): Promise<ApiResult<void>> {
+  try {
+    const formData = new URLSearchParams();
+    formData.append("username", username);
+    formData.append("email", email);
+
+    const response = await fetch(`${API_BASE_URL}/user`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: formData.toString(),
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      return {
+        success: false,
+        error: errorText || "Errore durante l'aggiornamento dell'utente",
+      };
+    }
+
+    return { success: true };
+  } catch (err) {
+    return {
+      success: false,
+      error:
+        err instanceof Error
+          ? err.message
+          : "Errore durante l'aggiornamento dell'utente",
+    };
+  }
+}
+
+// ============================================================================
+// COURSES API - /courses
+// ============================================================================
+
+/**
+ * Recupera la lista di tutti i corsi dell'utente
+ * GET /courses (protected)
+ */
+export async function getCourses(): Promise<CoursesListResponse[]> {
+  try {
+    console.log("[API] GET /courses - Fetching courses...");
+    
+    const response = await fetch(`${API_BASE_URL}/courses`, {
+      method: "GET",
+      credentials: "include",
+      headers: {
+        "Accept": "application/json",
+      },
+    });
+
+    console.log("[API] GET /courses - Response status:", response.status);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("[API] GET /courses - Error:", errorText);
+      return [];
+    }
+
+    const text = await response.text();
+    console.log("[API] GET /courses - Raw response:", text);
+    
+    // Handle empty response
+    if (!text || text.trim() === "" || text.trim() === "null") {
+      console.log("[API] GET /courses - Empty or null response, returning []");
+      return [];
+    }
+
+    const courses: CoursesListResponse[] = JSON.parse(text);
+    console.log("[API] GET /courses - Parsed courses:", courses);
+    
+    return courses || [];
+  } catch (err) {
+    console.error("[API] GET /courses - Exception:", err);
+    return [];
+  }
+}
+
+/**
+ * Recupera un singolo corso con tutte le sue risorse
+ * GET /courses/{id} (protected)
+ */
+export async function getCourse(id: number): Promise<CourseResponse | null> {
+  try {
+    console.log(`[API] GET /courses/${id} - Fetching course...`);
+    
+    const response = await fetch(`${API_BASE_URL}/courses/${id}`, {
+      method: "GET",
+      credentials: "include",
+      headers: {
+        "Accept": "application/json",
+      },
+    });
+
+    console.log(`[API] GET /courses/${id} - Response status:`, response.status);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`[API] GET /courses/${id} - Error:`, errorText);
+      return null;
+    }
+
+    const text = await response.text();
+    console.log(`[API] GET /courses/${id} - Raw response:`, text);
+    
+    if (!text || text.trim() === "" || text.trim() === "null") {
+      console.log(`[API] GET /courses/${id} - Empty or null response`);
+      return null;
+    }
+
+    const course: CourseResponse = JSON.parse(text);
+    console.log(`[API] GET /courses/${id} - Parsed course:`, course);
+    
+    return course;
+  } catch (err) {
+    console.error(`[API] GET /courses/${id} - Exception:`, err);
+    return null;
+  }
+}
+
+/**
+ * Crea un nuovo corso da un link OneDrive
+ * POST /courses (protected)
+ */
+export async function createCourse(
+  link: string,
+  name?: string
+): Promise<ApiResult<{ id: number }>> {
+  try {
+    const formData = new URLSearchParams();
+    formData.append("link", link);
+    if (name) {
+      formData.append("name", name);
+    }
+
+    const response = await fetch(`${API_BASE_URL}/courses`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: formData.toString(),
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      return {
+        success: false,
+        error: errorText || "Errore durante la creazione del corso",
+      };
+    }
+
+    // Il backend fa redirect, quindi prendiamo l'ID dall'URL finale
+    const url = response.url;
+    const idMatch = url.match(/\/courses\/(\d+)/);
+    const id = idMatch ? parseInt(idMatch[1], 10) : 0;
+
+    return { success: true, data: { id } };
+  } catch (err) {
+    return {
+      success: false,
+      error:
+        err instanceof Error
+          ? err.message
+          : "Errore durante la creazione del corso",
+    };
+  }
+}
+
+/**
+ * Aggiorna un corso esistente
+ * PUT /courses/{id} (protected)
+ */
+export async function updateCourse(
+  id: number,
+  link: string,
+  name?: string
+): Promise<ApiResult<{ id: number }>> {
+  try {
+    const formData = new URLSearchParams();
+    formData.append("link", link);
+    if (name) {
+      formData.append("name", name);
+    }
+
+    const response = await fetch(`${API_BASE_URL}/courses/${id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: formData.toString(),
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      return {
+        success: false,
+        error: errorText || "Errore durante l'aggiornamento del corso",
+      };
+    }
+
+    return { success: true, data: { id } };
+  } catch (err) {
+    return {
+      success: false,
+      error:
+        err instanceof Error
+          ? err.message
+          : "Errore durante l'aggiornamento del corso",
+    };
+  }
+}
+
+/**
+ * Elimina un corso
+ * DELETE /courses/{id} (protected)
+ */
+export async function deleteCourse(id: number): Promise<ApiResult<void>> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/courses/${id}`, {
+      method: "DELETE",
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      return {
+        success: false,
+        error: errorText || "Errore durante l'eliminazione del corso",
+      };
+    }
+
+    return { success: true };
+  } catch (err) {
+    return {
+      success: false,
+      error:
+        err instanceof Error
+          ? err.message
+          : "Errore durante l'eliminazione del corso",
+    };
+  }
+}
+
+// ============================================================================
+// UTILITY FUNCTIONS
+// ============================================================================
+
+/**
+ * Formatta la durata in millisecondi in formato leggibile (ore e minuti)
+ */
+export function formatDuration(milliseconds: number): string {
+  const totalMinutes = Math.floor(milliseconds / 60000);
+  if (totalMinutes < 60) return `${totalMinutes}m`;
+  const hours = Math.floor(totalMinutes / 60);
+  const mins = totalMinutes % 60;
+  return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
+}
+
+/**
+ * Formatta la durata per la visualizzazione nella lista (più compatta)
+ */
+export function formatDurationCompact(milliseconds: number): string {
+  const totalMinutes = Math.floor(milliseconds / 60000);
+  const hours = Math.floor(totalMinutes / 60);
+  const mins = totalMinutes % 60;
+
+  if (hours === 0) return `${mins}m`;
+  if (mins === 0) return `${hours}h`;
+  return `${hours}:${mins.toString().padStart(2, "0")}`;
+}
+
+/**
+ * Formatta una data ISO in formato italiano
+ */
+export function formatDate(dateString: string): string {
+  const date = new Date(dateString);
+  return date.toLocaleDateString("it-IT", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+/**
+ * Formatta una data in formato "tempo fa"
+ */
+export function timeAgo(dateString: string): string {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMins / 60);
+  const diffDays = Math.floor(diffHours / 24);
+
+  if (diffMins < 1) return "Adesso";
+  if (diffMins < 60) return `${diffMins}m fa`;
+  if (diffHours < 24) return `${diffHours}h fa`;
+  if (diffDays < 7) return `${diffDays}g fa`;
+  return formatDate(dateString);
+}
+
+/**
+ * Conta il numero totale di file in un corso
+ */
+export function countTotalFiles(course: Course): number {
+  let count = course.files?.length || 0;
+
+  function countInParts(parts: CoursePart[] | null): number {
+    if (!parts) return 0;
+    let partCount = 0;
+    for (const part of parts) {
+      partCount += part.files?.length || 0;
+      partCount += countInParts(part["sub-parts"]);
+    }
+    return partCount;
+  }
+
+  count += countInParts(course.parts);
+  return count;
+}
+
+/**
+ * Conta il numero totale di parti in un corso
+ */
+export function countTotalParts(course: Course): number {
+  function countParts(parts: CoursePart[] | null): number {
+    if (!parts) return 0;
+    let count = parts.length;
+    for (const part of parts) {
+      count += countParts(part["sub-parts"]);
+    }
+    return count;
+  }
+
+  return countParts(course.parts);
+}

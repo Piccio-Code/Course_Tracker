@@ -72,7 +72,7 @@ func main() {
 	sessionManager.Cookie.Domain = ""                     // localhost doesn’t need a domain
 
 	corsOptions := cors.Options{
-		AllowedOrigins:      []string{"http://192.168.1.3:3000", "http://localhost:3000"},
+		AllowedOrigins:      []string{"http://192.168.1.3:3000", "http://localhost:3000", "http://10.248.48.196:3000"},
 		AllowCredentials:    true,
 		AllowPrivateNetwork: true,
 	}
