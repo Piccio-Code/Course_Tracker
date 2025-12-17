@@ -22,6 +22,7 @@ type CourseResponse struct {
 type CoursesListResponse struct {
 	ID          int       `json:"id"`
 	Name        string    `json:"name"`
+	Duration    int       `json:"duration"`
 	Created     time.Time `json:"created"`
 	LastUpdated time.Time `json:"lastUpdated"`
 }
@@ -96,7 +97,7 @@ func (m *CourseModel) List(ctx context.Context, userId int) (courses []CoursesLi
 
 	defer tx.Rollback(ctx)
 
-	stmt := `SELECT id, course_resources->'name', created_at, last_updated FROM courses WHERE user_id = $1`
+	stmt := `SELECT id, course_resources->'name', course_resources->'duration', created_at, last_updated FROM courses WHERE user_id = $1`
 
 	rows, err := tx.Query(ctx, stmt, userId)
 
@@ -107,14 +108,21 @@ func (m *CourseModel) List(ctx context.Context, userId int) (courses []CoursesLi
 	for rows.Next() {
 		var course CoursesListResponse
 		var courseName []byte
+		var courseDuration []byte
 
-		err := rows.Scan(&course.ID, &courseName, &course.Created, &course.LastUpdated)
+		err := rows.Scan(&course.ID, &courseName, &courseDuration, &course.Created, &course.LastUpdated)
 
 		if err != nil {
 			return nil, err
 		}
 
 		err = json.Unmarshal(courseName, &course.Name)
+
+		if err != nil {
+			return nil, err
+		}
+
+		err = json.Unmarshal(courseDuration, &course.Duration)
 
 		if err != nil {
 			return nil, err
