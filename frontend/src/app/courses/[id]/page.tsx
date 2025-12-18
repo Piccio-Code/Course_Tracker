@@ -9,7 +9,7 @@ import {
   CourseFile,
 } from "@/lib/api";
 import { useParams } from "next/navigation";
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useMemo, useCallback, useRef, startTransition, memo } from "react";
 import Link from "next/link";
 
 // Flatten course parts into a navigable list
@@ -156,7 +156,7 @@ function countTotalFiles(flattenedParts: FlattenedPart[]): number {
   return count;
 }
 
-// Video Player Component
+// Video Player Component - Memoized for performance
 interface VideoPlayerProps {
   file: CourseFile;
   sectionName: string;
@@ -164,7 +164,7 @@ interface VideoPlayerProps {
   onUnauthorized: () => void;
 }
 
-function VideoPlayer({ file, sectionName, videoKey, onUnauthorized }: VideoPlayerProps) {
+const VideoPlayer = memo(function VideoPlayer({ file, sectionName, videoKey, onUnauthorized }: VideoPlayerProps) {
   const isVideo = ["mp4", "mkv", "avi", "webm", "mov"].includes(
     file.format.toLowerCase()
   );
@@ -323,10 +323,10 @@ function VideoPlayer({ file, sectionName, videoKey, onUnauthorized }: VideoPlaye
       </div>
     </div>
   );
-}
+});
 
-// Empty state when no file is selected
-function EmptyVideoState() {
+// Empty state when no file is selected - Memoized
+const EmptyVideoState = memo(function EmptyVideoState() {
   return (
     <div className="h-full min-h-[60vh] flex items-center justify-center px-4">
       <div className="text-center">
@@ -360,9 +360,9 @@ function EmptyVideoState() {
       </div>
     </div>
   );
-}
+});
 
-// Collapsible Section Component - Now showing FILES instead of sub-parts
+// Collapsible Section Component - Memoized for performance
 interface SectionItemProps {
   section: FlattenedPart;
   files: CourseFile[];
@@ -370,25 +370,27 @@ interface SectionItemProps {
   onToggle: () => void;
   selectedFileUrl: string | null;
   onFileSelect: (file: CourseFile, sectionName: string) => void;
-  searchQuery: string;
+  debouncedSearchQuery: string;
 }
 
-function SectionItem({
+const SectionItem = memo(function SectionItem({
   section,
   files,
   isExpanded,
   onToggle,
   selectedFileUrl,
   onFileSelect,
-  searchQuery,
+  debouncedSearchQuery,
 }: SectionItemProps) {
-  // Filter files by search query
-  const filteredFiles = searchQuery
-    ? files.filter((f) => f.name.toLowerCase().includes(searchQuery.toLowerCase()))
-    : files;
+  // Filter files by search query - using debounced value
+  const filteredFiles = useMemo(() => {
+    if (!debouncedSearchQuery) return files;
+    const query = debouncedSearchQuery.toLowerCase();
+    return files.filter((f) => f.name.toLowerCase().includes(query));
+  }, [files, debouncedSearchQuery]);
 
   // If searching and no files match, hide section
-  if (searchQuery && filteredFiles.length === 0) {
+  if (debouncedSearchQuery && filteredFiles.length === 0) {
     return null;
   }
 
@@ -524,6 +526,21 @@ function SectionItem({
       )}
     </div>
   );
+});
+
+// Custom hook for debounced value
+function useDebouncedValue<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => clearTimeout(timer);
+  }, [value, delay]);
+
+  return debouncedValue;
 }
 
 export default function CourseViewerPage() {
@@ -541,6 +558,7 @@ export default function CourseViewerPage() {
     null
   );
   const [searchQuery, setSearchQuery] = useState("");
+  const debouncedSearchQuery = useDebouncedValue(searchQuery, 200); // Debounce search for 200ms
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isUnauthorized, setIsUnauthorized] = useState(false);
   const [videoKey, setVideoKey] = useState(0);
@@ -582,6 +600,14 @@ export default function CourseViewerPage() {
   // Get sections (level 0 parts)
   const sections = useMemo(() => getSections(flattenedParts), [flattenedParts]);
 
+  // Pre-compute sections with their files to avoid repeated calculations in render
+  const sectionsWithFiles = useMemo(() => {
+    return sections.map((section) => ({
+      section,
+      files: getAllFilesForSection(flattenedParts, section.id),
+    }));
+  }, [sections, flattenedParts]);
+
   // Total files count
   const totalFiles = useMemo(
     () => countTotalFiles(flattenedParts),
@@ -601,16 +627,18 @@ export default function CourseViewerPage() {
     }
   }, [course, expandedSections]);
 
-  // Toggle section expansion
+  // Toggle section expansion - using startTransition for non-urgent updates
   const toggleSection = useCallback((sectionId: string) => {
-    setExpandedSections((prev) => {
-      const newSet = new Set(prev || []);
-      if (newSet.has(sectionId)) {
-        newSet.delete(sectionId);
-      } else {
-        newSet.add(sectionId);
-      }
-      return newSet;
+    startTransition(() => {
+      setExpandedSections((prev) => {
+        const newSet = new Set(prev || []);
+        if (newSet.has(sectionId)) {
+          newSet.delete(sectionId);
+        } else {
+          newSet.add(sectionId);
+        }
+        return newSet;
+      });
     });
   }, []);
 
@@ -659,11 +687,16 @@ export default function CourseViewerPage() {
     }
   }, [currentFileIndex, allFiles]);
 
+  // Memoized callback for video unauthorized state
+  const handleUnauthorized = useCallback(() => {
+    setIsUnauthorized(true);
+  }, []);
+
   if (isLoading) {
     return (
       <div className="relative h-screen overflow-hidden bg-black">
         <PageBackground />
-        <div className="absolute inset-0 bg-black/60 backdrop-blur-2xl" />
+        <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
         <main className="relative z-10 flex h-full items-center justify-center">
           <div className="flex flex-col items-center gap-4 text-white">
             <div className="relative w-16 h-16">
@@ -685,7 +718,7 @@ export default function CourseViewerPage() {
     return (
       <div className="relative h-screen overflow-hidden bg-black">
         <PageBackground />
-        <div className="absolute inset-0 bg-black/60 backdrop-blur-2xl" />
+        <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
         <main className="relative z-10 flex h-full items-center justify-center px-6">
           <div className="text-center">
             <div className="mb-8">
@@ -741,12 +774,12 @@ export default function CourseViewerPage() {
   return (
     <div className="relative h-screen overflow-hidden bg-black">
       <PageBackground />
-      {/* Strong blur overlay */}
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-2xl" />
+      {/* Optimized overlay - reduced blur for better performance */}
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
 
       <main className="relative z-10 h-full flex flex-col">
         {/* Top Header Bar with Navigation */}
-        <header className="flex-shrink-0 px-4 md:px-6 py-3 border-b border-white/10 bg-black/40 backdrop-blur-xl">
+        <header className="flex-shrink-0 px-4 md:px-6 py-3 border-b border-white/10 bg-black/60 backdrop-blur-sm">
           <div className="flex items-center justify-between max-w-[1800px] mx-auto">
             {/* Left: Navigation */}
             <div className="flex items-center gap-2 md:gap-4">
@@ -892,7 +925,7 @@ export default function CourseViewerPage() {
           {/* Mobile Sidebar Backdrop */}
           {isSidebarOpen && (
             <div
-              className="md:hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-40 animate-in fade-in duration-200"
+              className="md:hidden fixed inset-0 bg-black/80 z-40 animate-in fade-in duration-200"
               onClick={() => setIsSidebarOpen(false)}
             />
           )}
@@ -902,8 +935,8 @@ export default function CourseViewerPage() {
             className={`
               fixed md:relative inset-y-0 left-0 z-50
               w-[280px] sm:w-[320px] md:w-[340px]
-              flex-shrink-0 border-r border-white/10 bg-black/95 md:bg-black/40 backdrop-blur-xl flex flex-col
-              transition-transform duration-300 ease-in-out
+              flex-shrink-0 border-r border-white/10 bg-black/95 md:bg-black/60 backdrop-blur-sm flex flex-col
+              transition-transform duration-300 ease-in-out will-change-transform
               ${isSidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}
             `}
           >
@@ -972,30 +1005,30 @@ export default function CourseViewerPage() {
 
             {/* Sections List */}
             <div className="flex-1 overflow-y-auto scrollbar-hide">
-              {sections.map((section) => (
+              {sectionsWithFiles.map(({ section, files }) => (
                 <SectionItem
                   key={section.id}
                   section={section}
-                  files={getAllFilesForSection(flattenedParts, section.id)}
+                  files={files}
                   isExpanded={(expandedSections || new Set()).has(section.id)}
                   onToggle={() => toggleSection(section.id)}
                   selectedFileUrl={selectedFile?.file.url || null}
                   onFileSelect={selectFile}
-                  searchQuery={searchQuery}
+                  debouncedSearchQuery={debouncedSearchQuery}
                 />
               ))}
             </div>
           </aside>
 
           {/* Main Video Player Area - Scrollable */}
-          <section className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 md:p-8 bg-black/20 backdrop-blur-lg relative">
+          <section className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 md:p-8 bg-black/30 relative">
             <div className="w-full max-w-6xl mx-auto">
               {selectedFile ? (
                 <VideoPlayer
                   file={selectedFile.file}
                   sectionName={selectedFile.sectionName}
                   videoKey={videoKey}
-                  onUnauthorized={() => setIsUnauthorized(true)}
+                  onUnauthorized={handleUnauthorized}
                 />
               ) : (
                 <EmptyVideoState />
@@ -1005,8 +1038,8 @@ export default function CourseViewerPage() {
             {/* Authorization Overlay - Covers entire content area */}
             {isUnauthorized && (
               <div className="fixed md:absolute inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
-                {/* Backdrop with strong blur */}
-                <div className="absolute inset-0 bg-black/85 backdrop-blur-2xl" />
+                {/* Backdrop - reduced blur for performance */}
+                <div className="absolute inset-0 bg-black/90 backdrop-blur-sm" />
                 
                 {/* Content */}
                 <div className="relative z-10 w-full max-w-lg">

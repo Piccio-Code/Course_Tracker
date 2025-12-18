@@ -182,7 +182,8 @@ const LightPillar: React.FC<LightPillarProps> = ({
 
         vec3 color = vec3(0.0);
         
-        for(float i = 0.0; i < 100.0; i++) {
+        // Reduced iterations from 100 to 60 for better performance
+        for(float i = 0.0; i < 60.0; i++) {
           vec3 pos = origin + direction * depth;
           pos.xz *= rotX;
 
@@ -268,18 +269,35 @@ const LightPillar: React.FC<LightPillarProps> = ({
       container.addEventListener('mousemove', handleMouseMove, { passive: true });
     }
 
-    // Animation loop with fixed timestep
+    // Animation loop with fixed timestep - reduced to 30fps for better performance
     let lastTime = performance.now();
-    const targetFPS = 60;
+    const targetFPS = 30; // Reduced from 60fps
     const frameTime = 1000 / targetFPS;
+    let isVisible = true;
+
+    // Pause animation when tab is hidden
+    const handleVisibilityChange = () => {
+      isVisible = !document.hidden;
+      if (isVisible && !rafRef.current) {
+        lastTime = performance.now();
+        rafRef.current = requestAnimationFrame(animate);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     const animate = (currentTime: number) => {
       if (!materialRef.current || !rendererRef.current || !sceneRef.current || !cameraRef.current) return;
+      
+      // Stop rendering when tab is hidden
+      if (!isVisible) {
+        rafRef.current = null;
+        return;
+      }
 
       const deltaTime = currentTime - lastTime;
 
       if (deltaTime >= frameTime) {
-        timeRef.current += 0.016 * rotationSpeed;
+        timeRef.current += 0.033 * rotationSpeed; // Adjusted for 30fps
         materialRef.current.uniforms.uTime.value = timeRef.current;
         rendererRef.current.render(sceneRef.current, cameraRef.current);
         lastTime = currentTime - (deltaTime % frameTime);
@@ -310,6 +328,7 @@ const LightPillar: React.FC<LightPillarProps> = ({
     // Cleanup
     return () => {
       window.removeEventListener('resize', handleResize);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
       if (interactive) {
         container.removeEventListener('mousemove', handleMouseMove);
       }

@@ -13,7 +13,7 @@ import {
   CoursesListResponse,
 } from "@/lib/api";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, memo } from "react";
 
 // Colori per le card dei corsi (gradient)
 const courseColors = [
@@ -31,7 +31,7 @@ interface CourseCardProps {
   onClick: () => void;
 }
 
-function CourseCard({ course, index, onClick }: CourseCardProps) {
+const CourseCard = memo(function CourseCard({ course, index, onClick }: CourseCardProps) {
   const colorSet = courseColors[index % courseColors.length];
 
   return (
@@ -132,13 +132,13 @@ function CourseCard({ course, index, onClick }: CourseCardProps) {
       </div>
     </div>
   );
-}
+});
 
 interface EmptyStateProps {
   onAddCourse: () => void;
 }
 
-function EmptyState({ onAddCourse }: EmptyStateProps) {
+const EmptyState = memo(function EmptyState({ onAddCourse }: EmptyStateProps) {
   return (
     <div className="col-span-full flex flex-col items-center justify-center py-20">
       <div className="relative mb-8">
@@ -186,13 +186,13 @@ function EmptyState({ onAddCourse }: EmptyStateProps) {
       </button>
     </div>
   );
-}
+});
 
 interface ErrorStateProps {
   onRetry: () => void;
 }
 
-function ErrorState({ onRetry }: ErrorStateProps) {
+const ErrorState = memo(function ErrorState({ onRetry }: ErrorStateProps) {
   return (
     <div className="col-span-full flex flex-col items-center justify-center py-20">
       <div className="relative mb-8">
@@ -240,16 +240,16 @@ function ErrorState({ onRetry }: ErrorStateProps) {
       </button>
     </div>
   );
-}
+});
 
-// Modal per creare un nuovo corso
+// Modal per creare un nuovo corso - Memoized
 interface NewCourseModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
 }
 
-function NewCourseModal({ isOpen, onClose, onSuccess }: NewCourseModalProps) {
+const NewCourseModal = memo(function NewCourseModal({ isOpen, onClose, onSuccess }: NewCourseModalProps) {
   const [link, setLink] = useState("");
   const [name, setName] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -303,7 +303,7 @@ function NewCourseModal({ isOpen, onClose, onSuccess }: NewCourseModalProps) {
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200"
+        className="absolute inset-0 bg-black/80 animate-in fade-in duration-200"
         onClick={handleClose}
       />
 
@@ -312,7 +312,7 @@ function NewCourseModal({ isOpen, onClose, onSuccess }: NewCourseModalProps) {
         {/* Glow effect */}
         <div className="absolute -inset-1 bg-gradient-to-r from-violet-500 to-fuchsia-500 rounded-3xl blur-lg opacity-30" />
 
-        <div className="relative rounded-2xl bg-black/90 border border-white/10 backdrop-blur-xl overflow-hidden">
+        <div className="relative rounded-2xl bg-black/95 border border-white/10 overflow-hidden">
           {/* Header */}
           <div className="flex items-center justify-between p-6 border-b border-white/5">
             <div className="flex items-center gap-3">
@@ -547,7 +547,7 @@ function NewCourseModal({ isOpen, onClose, onSuccess }: NewCourseModalProps) {
       </div>
     </div>
   );
-}
+});
 
 export default function Dashboard() {
   const router = useRouter();
@@ -624,6 +624,11 @@ export default function Dashboard() {
     fetchCourses();
   };
 
+  // Memoized navigation handler for courses
+  const handleCourseClick = useCallback((courseId: number) => {
+    router.push(`/courses/${courseId}`);
+  }, [router]);
+
   // Calcola la durata totale di tutti i corsi
   const totalDuration = courses.reduce((acc, c) => acc + c.duration, 0);
 
@@ -631,7 +636,7 @@ export default function Dashboard() {
     return (
       <div className="relative min-h-screen overflow-hidden bg-black">
         <PageBackground />
-        <div className="absolute inset-0 bg-black/50 backdrop-blur-xl" />
+        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
         <main className="relative z-10 flex min-h-screen items-center justify-center">
           <div className="flex flex-col items-center gap-4 text-white">
             {/* Animated loader */}
@@ -653,8 +658,8 @@ export default function Dashboard() {
   return (
     <div className="relative min-h-screen overflow-hidden bg-black">
       <PageBackground />
-      {/* Strong blur overlay */}
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-xl" />
+      {/* Optimized overlay - reduced blur for performance */}
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
 
       <main className="relative z-10 min-h-screen px-6 py-8">
         {/* Header */}
@@ -809,7 +814,7 @@ export default function Dashboard() {
                     key={course.id}
                     course={course}
                     index={index}
-                    onClick={() => router.push(`/courses/${course.id}`)}
+                    onClick={() => handleCourseClick(course.id)}
                   />
                 ))
               ) : isLoadingCourses ? (
