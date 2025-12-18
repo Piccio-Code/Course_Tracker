@@ -160,12 +160,24 @@ function countTotalFiles(flattenedParts: FlattenedPart[]): number {
 interface VideoPlayerProps {
   file: CourseFile;
   sectionName: string;
+  videoKey: number;
+  onUnauthorized: () => void;
 }
 
-function VideoPlayer({ file, sectionName }: VideoPlayerProps) {
+function VideoPlayer({ file, sectionName, videoKey, onUnauthorized }: VideoPlayerProps) {
   const isVideo = ["mp4", "mkv", "avi", "webm", "mov"].includes(
     file.format.toLowerCase()
   );
+
+  const handleVideoError = (e: React.SyntheticEvent<HTMLVideoElement>) => {
+    const video = e.currentTarget;
+    const error = video.error;
+    
+    // Check if the error is due to network/authorization issues
+    if (error && (error.code === MediaError.MEDIA_ERR_NETWORK || error.code === MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED)) {
+      onUnauthorized();
+    }
+  };
 
   return (
     <div className="flex flex-col py-4 sm:py-6">
@@ -175,11 +187,13 @@ function VideoPlayer({ file, sectionName }: VideoPlayerProps) {
           <div className="w-full">
             <div className="relative rounded-xl sm:rounded-2xl overflow-hidden bg-black border border-white/10 shadow-2xl shadow-violet-500/10">
               <video
+                key={videoKey}
                 controls
                 controlsList="nodownload"
                 className="w-full aspect-video bg-black"
                 src={file.url}
                 preload="metadata"
+                onError={handleVideoError}
               >
                 <source src={file.url} type={`video/${file.format.toLowerCase()}`} />
                 Il tuo browser non supporta la riproduzione video.
@@ -528,6 +542,8 @@ export default function CourseViewerPage() {
   );
   const [searchQuery, setSearchQuery] = useState("");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isUnauthorized, setIsUnauthorized] = useState(false);
+  const [videoKey, setVideoKey] = useState(0);
 
   useEffect(() => {
     async function fetchCourse() {
@@ -604,6 +620,8 @@ export default function CourseViewerPage() {
       setSelectedFile({ file, sectionName });
       // Close sidebar on mobile when file is selected
       setIsSidebarOpen(false);
+      // Reset unauthorized state when selecting a new file
+      setIsUnauthorized(false);
     },
     []
   );
@@ -970,17 +988,131 @@ export default function CourseViewerPage() {
           </aside>
 
           {/* Main Video Player Area - Scrollable */}
-          <section className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 md:p-8 bg-black/20 backdrop-blur-lg">
+          <section className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 md:p-8 bg-black/20 backdrop-blur-lg relative">
             <div className="w-full max-w-6xl mx-auto">
               {selectedFile ? (
                 <VideoPlayer
                   file={selectedFile.file}
                   sectionName={selectedFile.sectionName}
+                  videoKey={videoKey}
+                  onUnauthorized={() => setIsUnauthorized(true)}
                 />
               ) : (
                 <EmptyVideoState />
               )}
             </div>
+
+            {/* Authorization Overlay - Covers entire content area */}
+            {isUnauthorized && (
+              <div className="fixed md:absolute inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
+                {/* Backdrop with strong blur */}
+                <div className="absolute inset-0 bg-black/85 backdrop-blur-2xl" />
+                
+                {/* Content */}
+                <div className="relative z-10 w-full max-w-lg">
+                  <div className="bg-gradient-to-br from-black/95 to-black/90 border border-yellow-500/40 rounded-2xl p-6 sm:p-10 shadow-2xl shadow-yellow-500/30">
+                    <div className="text-center">
+                      {/* Icon */}
+                      <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-br from-yellow-500/20 to-orange-500/20 flex items-center justify-center mx-auto mb-6 shadow-lg shadow-yellow-500/20">
+                        <svg
+                          className="w-10 h-10 sm:w-12 sm:h-12 text-yellow-400"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                          />
+                        </svg>
+                      </div>
+
+                      {/* Title */}
+                      <h3 className="text-2xl sm:text-3xl font-bold text-white mb-4">
+                        Autorizzazione Richiesta
+                      </h3>
+
+                      {/* Description */}
+                      <p className="text-white/70 mb-8 text-base sm:text-lg leading-relaxed">
+                        Questo video richiede l&apos;autenticazione Microsoft.<br />
+                        Effettua il login per accedere al contenuto.
+                      </p>
+
+                      {/* Buttons */}
+                      <div className="flex flex-col gap-3 sm:gap-4">
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault();
+                            if (!selectedFile?.file.url) return;
+                            
+                            // Open video link in new window/tab
+                            const authWindow = window.open(selectedFile.file.url, '_blank');
+                            
+                            if (!authWindow) {
+                              // Popup blocked - show message
+                              alert('Per favore, consenti i popup per questo sito e riprova.');
+                              return;
+                            }
+                            
+                            // Check periodically if window was closed
+                            const checkInterval = setInterval(() => {
+                              if (authWindow.closed) {
+                                clearInterval(checkInterval);
+                                // Auto-reload video when user closes the auth window
+                                setTimeout(() => {
+                                  setIsUnauthorized(false);
+                                  setVideoKey(prev => prev + 1);
+                                }, 500);
+                              }
+                            }, 500);
+                            
+                            // Cleanup after 15 minutes
+                            setTimeout(() => {
+                              clearInterval(checkInterval);
+                            }, 15 * 60 * 1000);
+                          }}
+                          className="inline-flex items-center justify-center gap-3 px-8 py-4 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold text-base hover:shadow-xl hover:shadow-blue-500/30 hover:scale-105 transition-all duration-200"
+                        >
+                          <svg
+                            className="w-6 h-6"
+                            fill="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path d="M11.4 24H0V12.6h11.4V24zM24 24H12.6V12.6H24V24zM11.4 11.4H0V0h11.4v11.4zm12.6 0H12.6V0H24v11.4z" />
+                          </svg>
+                          Accedi con Microsoft
+                        </button>
+                        
+                        <button
+                          onClick={() => {
+                            setIsUnauthorized(false);
+                            setVideoKey(prev => prev + 1);
+                          }}
+                          className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-white/5 border border-white/20 text-white/80 text-sm font-medium hover:bg-white/10 hover:border-white/30 hover:text-white transition-all duration-200"
+                        >
+                          <svg
+                            className="w-5 h-5"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                            />
+                          </svg>
+                          Riprova manualmente
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </section>
         </div>
       </main>

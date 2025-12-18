@@ -1,6 +1,5 @@
 // Configurazione API - Modifica qui l'URL base del backend
-export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL ||  "https://api.coursetracker.it";
+export const API_BASE_URL = "https://api.coursetracker.it";
 
 // ============================================================================
 // INTERFACES - Matching Go structures from Wrapper/onedrive.go
