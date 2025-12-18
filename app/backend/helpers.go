@@ -12,7 +12,7 @@ const CurrentUserIdKey = CurrentUserId("AuthenticatedUserKey")
 const AuthenticatedUserId = "AuthenticatedUserId"
 
 type CourseForm struct {
-	URL  string `form:"url"`
+	URL  string `form:"link"`
 	Name string `form:"name"`
 }
 

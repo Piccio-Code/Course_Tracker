@@ -30,7 +30,7 @@ type Application struct {
 func main() {
 
 	onedriveFlag := flag.Bool("onedrive", false, "This flag will connect with onedrive API")
-	//productionFlag := flag.Bool("product", false, "This flag will enable secure cookie only sent by HTTPS")
+	devFlag := flag.Bool("dev", false, "This flag will disable secure cookie only sent by HTTPS, use only for production")
 
 	flag.Parse()
 
@@ -67,12 +67,11 @@ func main() {
 	sessionManager.Lifetime = 12 * time.Hour
 	sessionManager.Cookie.HttpOnly = true
 	sessionManager.Cookie.Persist = true
-	sessionManager.Cookie.Secure = false                  // allow HTTP
+	sessionManager.Cookie.Secure = !*devFlag              // allow HTTP
 	sessionManager.Cookie.SameSite = http.SameSiteLaxMode // Lax or None
-	sessionManager.Cookie.Domain = ""                     // localhost doesn’t need a domain
 
 	corsOptions := cors.Options{
-		AllowedOrigins:      []string{"http://192.168.1.3:3000", "http://localhost:3000", "http://10.248.48.196:3000"},
+		AllowedOrigins:      []string{"https://coursetracker.it", "http://192.168.1.3:3000", "http://localhost:3000", "http://10.248.48.196:3000"},
 		AllowCredentials:    true,
 		AllowPrivateNetwork: true,
 	}

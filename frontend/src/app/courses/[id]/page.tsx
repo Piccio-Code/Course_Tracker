@@ -24,6 +24,54 @@ interface FlattenedPart {
   parentId: string | null;
 }
 
+// Natural sort function to sort parts numerically (1, 2, 3, ... 10, 11)
+function naturalSort(a: CoursePart, b: CoursePart): number {
+  const regex = /(\d+)|(\D+)/g;
+  const aParts = a.name.match(regex) || [];
+  const bParts = b.name.match(regex) || [];
+
+  for (let i = 0; i < Math.max(aParts.length, bParts.length); i++) {
+    const aPart = aParts[i] || "";
+    const bPart = bParts[i] || "";
+
+    // If both parts are numeric, compare as numbers
+    if (/^\d+$/.test(aPart) && /^\d+$/.test(bPart)) {
+      const diff = parseInt(aPart, 10) - parseInt(bPart, 10);
+      if (diff !== 0) return diff;
+    } else {
+      // Otherwise compare as strings
+      const diff = aPart.localeCompare(bPart);
+      if (diff !== 0) return diff;
+    }
+  }
+
+  return 0;
+}
+
+// Natural sort function for files
+function naturalSortFiles(a: CourseFile, b: CourseFile): number {
+  const regex = /(\d+)|(\D+)/g;
+  const aParts = a.name.match(regex) || [];
+  const bParts = b.name.match(regex) || [];
+
+  for (let i = 0; i < Math.max(aParts.length, bParts.length); i++) {
+    const aPart = aParts[i] || "";
+    const bPart = bParts[i] || "";
+
+    // If both parts are numeric, compare as numbers
+    if (/^\d+$/.test(aPart) && /^\d+$/.test(bPart)) {
+      const diff = parseInt(aPart, 10) - parseInt(bPart, 10);
+      if (diff !== 0) return diff;
+    } else {
+      // Otherwise compare as strings
+      const diff = aPart.localeCompare(bPart);
+      if (diff !== 0) return diff;
+    }
+  }
+
+  return 0;
+}
+
 function flattenParts(
   parts: CoursePart[] | null,
   level: number = 0,
@@ -32,11 +80,17 @@ function flattenParts(
 ): FlattenedPart[] {
   if (!parts) return [];
 
+  // Sort parts naturally before processing
+  const sortedParts = [...parts].sort(naturalSort);
+
   const result: FlattenedPart[] = [];
 
-  parts.forEach((part, index) => {
+  sortedParts.forEach((part, index) => {
     const currentPath = parentPath ? `${parentPath} > ${part.name}` : part.name;
     const id = `${level}-${index}-${part.name}`;
+
+    // Sort files naturally if they exist
+    const sortedFiles = part.files ? [...part.files].sort(naturalSortFiles) : null;
 
     result.push({
       id,
@@ -44,7 +98,7 @@ function flattenParts(
       fullPath: currentPath,
       level,
       duration: part.duration,
-      files: part.files,
+      files: sortedFiles,
       part,
       parentId,
     });
