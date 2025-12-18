@@ -223,7 +223,7 @@ const VideoPlayer = memo(function VideoPlayer({ file, sectionName, videoKey, onU
               href={file.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white font-medium hover:shadow-lg hover:shadow-violet-500/25 transition-all"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white font-medium hover:shadow-lg hover:shadow-violet-500/25 transition-shadow duration-200"
             >
               <svg
                 className="w-5 h-5"
@@ -298,7 +298,7 @@ const VideoPlayer = memo(function VideoPlayer({ file, sectionName, videoKey, onU
                   href={file.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-1 text-xs text-white/40 hover:text-violet-400 transition-colors"
+                  className="flex items-center gap-1 text-xs text-white/40 hover:text-violet-400 transition-colors duration-150"
                 >
                   <svg
                     className="w-3.5 h-3.5"
@@ -399,11 +399,11 @@ const SectionItem = memo(function SectionItem({
       {/* Section Header */}
       <button
         onClick={onToggle}
-        className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-colors text-left"
+        className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-colors duration-100 text-left"
       >
         {/* Expand/Collapse Arrow */}
         <svg
-          className={`w-4 h-4 text-white/40 transition-transform flex-shrink-0 ${
+          className={`w-4 h-4 text-white/40 transition-transform duration-150 flex-shrink-0 ${
             isExpanded ? "rotate-180" : ""
           }`}
           fill="none"
@@ -443,7 +443,7 @@ const SectionItem = memo(function SectionItem({
                 <button
                   key={idx}
                   onClick={() => onFileSelect(file, section.name)}
-                  className={`w-full flex items-center gap-3 px-4 py-2.5 pl-11 text-left transition-colors ${
+                  className={`w-full flex items-center gap-3 px-4 py-2.5 pl-11 text-left transition-colors duration-100 ${
                     isSelected
                       ? "bg-violet-500/20 border-l-2 border-violet-500"
                       : "hover:bg-white/5 border-l-2 border-transparent"
@@ -746,7 +746,7 @@ export default function CourseViewerPage() {
             </p>
             <Link
               href="/dashboard"
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white font-medium hover:shadow-lg hover:shadow-violet-500/25 transition-all"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white font-medium hover:shadow-lg hover:shadow-violet-500/25 transition-shadow duration-200"
             >
               <svg
                 className="w-5 h-5"
@@ -786,7 +786,7 @@ export default function CourseViewerPage() {
               {/* Mobile Menu Toggle */}
               <button
                 onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                className="md:hidden w-9 h-9 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-all"
+                className="md:hidden w-9 h-9 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-colors duration-150"
                 aria-label="Toggle menu"
               >
                 <svg
@@ -807,7 +807,7 @@ export default function CourseViewerPage() {
               {/* Back to Dashboard */}
               <Link
                 href="/dashboard"
-                className="w-9 h-9 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-all"
+                className="w-9 h-9 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-colors duration-150"
               >
                 <svg
                   className="w-5 h-5"
@@ -829,7 +829,7 @@ export default function CourseViewerPage() {
                 <button
                   onClick={goToPrevFile}
                   disabled={currentFileIndex <= 0}
-                  className="w-9 h-9 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                  className="w-9 h-9 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-colors duration-150 disabled:opacity-30 disabled:cursor-not-allowed"
                   title="Video precedente"
                 >
                   <svg
@@ -849,7 +849,7 @@ export default function CourseViewerPage() {
                 <button
                   onClick={goToNextFile}
                   disabled={currentFileIndex >= allFiles.length - 1}
-                  className="w-9 h-9 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                  className="w-9 h-9 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-colors duration-150 disabled:opacity-30 disabled:cursor-not-allowed"
                   title="Video successivo"
                 >
                   <svg
@@ -925,7 +925,7 @@ export default function CourseViewerPage() {
           {/* Mobile Sidebar Backdrop */}
           {isSidebarOpen && (
             <div
-              className="md:hidden fixed inset-0 bg-black/80 z-40 animate-in fade-in duration-200"
+              className="md:hidden fixed inset-0 bg-black/80 z-40 animate-in fade-in duration-150"
               onClick={() => setIsSidebarOpen(false)}
             />
           )}
@@ -936,7 +936,7 @@ export default function CourseViewerPage() {
               fixed md:relative inset-y-0 left-0 z-50
               w-[280px] sm:w-[320px] md:w-[340px]
               flex-shrink-0 border-r border-white/10 bg-black/95 md:bg-black/60 backdrop-blur-sm flex flex-col
-              transition-transform duration-300 ease-in-out will-change-transform
+              transition-transform duration-200 ease-out will-change-transform
               ${isSidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}
             `}
           >
@@ -944,7 +944,7 @@ export default function CourseViewerPage() {
             <div className="md:hidden flex-shrink-0 px-4 py-3 border-b border-white/10">
               <button
                 onClick={() => setIsSidebarOpen(false)}
-                className="w-full flex items-center justify-between text-white/60 hover:text-white transition-colors"
+                className="w-full flex items-center justify-between text-white/60 hover:text-white transition-colors duration-150"
               >
                 <span className="text-sm font-medium">Menu</span>
                 <svg
@@ -971,7 +971,7 @@ export default function CourseViewerPage() {
               </div>
               <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-gradient-to-r from-violet-500 to-fuchsia-500 rounded-full transition-all"
+                  className="h-full bg-gradient-to-r from-violet-500 to-fuchsia-500 rounded-full transition-[width] duration-300"
                   style={{ width: "0%" }}
                 />
               </div>
@@ -998,7 +998,7 @@ export default function CourseViewerPage() {
                   placeholder="Search lessons..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-white/5 border border-white/10 rounded-lg py-2 pl-10 pr-4 text-sm text-white placeholder-white/40 focus:outline-none focus:border-violet-500/50 focus:bg-white/10 transition-all"
+                  className="w-full bg-white/5 border border-white/10 rounded-lg py-2 pl-10 pr-4 text-sm text-white placeholder-white/40 focus:outline-none focus:border-violet-500/50 focus:bg-white/10 transition-colors duration-150"
                 />
               </div>
             </div>
@@ -1106,7 +1106,7 @@ export default function CourseViewerPage() {
                               clearInterval(checkInterval);
                             }, 15 * 60 * 1000);
                           }}
-                          className="inline-flex items-center justify-center gap-3 px-8 py-4 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold text-base hover:shadow-xl hover:shadow-blue-500/30 hover:scale-105 transition-all duration-200"
+                          className="inline-flex items-center justify-center gap-3 px-8 py-4 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold text-base hover:shadow-xl hover:shadow-blue-500/30 hover:scale-105 transition-[transform,shadow] duration-200 will-change-transform"
                         >
                           <svg
                             className="w-6 h-6"
@@ -1123,7 +1123,7 @@ export default function CourseViewerPage() {
                             setIsUnauthorized(false);
                             setVideoKey(prev => prev + 1);
                           }}
-                          className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-white/5 border border-white/20 text-white/80 text-sm font-medium hover:bg-white/10 hover:border-white/30 hover:text-white transition-all duration-200"
+                          className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-white/5 border border-white/20 text-white/80 text-sm font-medium hover:bg-white/10 hover:border-white/30 hover:text-white transition-colors duration-150"
                         >
                           <svg
                             className="w-5 h-5"

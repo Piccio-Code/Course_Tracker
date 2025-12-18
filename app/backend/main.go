@@ -74,6 +74,7 @@ func main() {
 		AllowedOrigins:      []string{"https://coursetracker.it", "http://192.168.1.3:3000", "http://localhost:3000", "http://10.248.48.196:3000"},
 		AllowCredentials:    true,
 		AllowPrivateNetwork: true,
+		AllowedMethods:      []string{"GET", "POST", "PUT", "DELETE", "HEAD"},
 	}
 
 	app := Application{

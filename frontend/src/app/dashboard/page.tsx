@@ -6,6 +6,7 @@ import {
   logout,
   getCourses,
   createCourse,
+  deleteCourse,
   formatDuration,
   formatDate,
   timeAgo,
@@ -29,9 +30,10 @@ interface CourseCardProps {
   course: CoursesListResponse;
   index: number;
   onClick: () => void;
+  onDelete: (e: React.MouseEvent) => void;
 }
 
-const CourseCard = memo(function CourseCard({ course, index, onClick }: CourseCardProps) {
+const CourseCard = memo(function CourseCard({ course, index, onClick, onDelete }: CourseCardProps) {
   const colorSet = courseColors[index % courseColors.length];
 
   return (
@@ -42,19 +44,40 @@ const CourseCard = memo(function CourseCard({ course, index, onClick }: CourseCa
     >
       {/* Glow effect */}
       <div
-        className={`absolute -inset-0.5 bg-gradient-to-r ${colorSet.from} ${colorSet.to} rounded-2xl blur opacity-0 group-hover:opacity-60 transition-all duration-500`}
+        className={`absolute -inset-0.5 bg-gradient-to-r ${colorSet.from} ${colorSet.to} rounded-2xl blur opacity-0`}
       />
 
       {/* Card */}
-      <div className="relative rounded-2xl bg-black/60 border border-white/10 backdrop-blur-xl overflow-hidden transition-all duration-500 group-hover:border-white/20 group-hover:scale-[1.02] cursor-pointer">
+      <div className="relative rounded-2xl bg-black/60 border border-white/10 backdrop-blur-xl overflow-hidden cursor-pointer">
         {/* Header gradient bar */}
         <div
           className={`h-1.5 bg-gradient-to-r ${colorSet.from} ${colorSet.to}`}
         />
 
+        {/* Delete button */}
+        <button
+          onClick={onDelete}
+          className="absolute top-4 right-4 z-10 w-8 h-8 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 hover:bg-red-500/20 hover:border-red-500/40 hover:text-red-300 transition-colors duration-150 opacity-0 group-hover:opacity-100"
+          title="Elimina corso"
+        >
+          <svg
+            className="w-4 h-4"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+            />
+          </svg>
+        </button>
+
         <div className="p-6">
           {/* Course name */}
-          <h3 className="text-xl font-bold text-white mb-4 truncate group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-white group-hover:to-white/80 transition-all duration-300">
+          <h3 className="text-xl font-bold text-white mb-4 truncate">
             {course.name}
           </h3>
 
@@ -180,7 +203,7 @@ const EmptyState = memo(function EmptyState({ onAddCourse }: EmptyStateProps) {
       </p>
       <button
         onClick={onAddCourse}
-        className="px-6 py-3 rounded-xl bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white font-medium hover:shadow-lg hover:shadow-violet-500/25 transition-all hover:scale-105"
+        className="px-6 py-3 rounded-xl bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white font-medium hover:shadow-lg hover:shadow-violet-500/25 transition-[transform,shadow] duration-200 hover:scale-105 will-change-transform"
       >
         Aggiungi il tuo primo corso
       </button>
@@ -221,7 +244,7 @@ const ErrorState = memo(function ErrorState({ onRetry }: ErrorStateProps) {
       </p>
       <button
         onClick={onRetry}
-        className="px-6 py-3 rounded-xl bg-gradient-to-r from-red-500 to-orange-500 text-white font-medium hover:shadow-lg hover:shadow-red-500/25 transition-all hover:scale-105 flex items-center gap-2"
+        className="px-6 py-3 rounded-xl bg-gradient-to-r from-red-500 to-orange-500 text-white font-medium hover:shadow-lg hover:shadow-red-500/25 transition-[transform,shadow] duration-200 hover:scale-105 flex items-center gap-2 will-change-transform"
       >
         <svg
           className="w-5 h-5"
@@ -341,7 +364,7 @@ const NewCourseModal = memo(function NewCourseModal({ isOpen, onClose, onSuccess
             <button
               onClick={handleClose}
               disabled={isSubmitting}
-              className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-all disabled:opacity-50"
+              className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-colors duration-150 disabled:opacity-50"
             >
               <svg
                 className="w-4 h-4"
@@ -388,7 +411,7 @@ const NewCourseModal = memo(function NewCourseModal({ isOpen, onClose, onSuccess
                   onChange={(e) => setLink(e.target.value)}
                   placeholder="https://onedrive.live.com/..."
                   disabled={isSubmitting}
-                  className="w-full pl-12 pr-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/30 focus:outline-none focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 transition-all disabled:opacity-50"
+                  className="w-full pl-12 pr-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/30 focus:outline-none focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 transition-colors duration-150 disabled:opacity-50"
                 />
               </div>
               <p className="text-xs text-white/40">
@@ -425,7 +448,7 @@ const NewCourseModal = memo(function NewCourseModal({ isOpen, onClose, onSuccess
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Es: React Complete Course"
                   disabled={isSubmitting}
-                  className="w-full pl-12 pr-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/30 focus:outline-none focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 transition-all disabled:opacity-50"
+                  className="w-full pl-12 pr-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/30 focus:outline-none focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 transition-colors duration-150 disabled:opacity-50"
                 />
               </div>
               <p className="text-xs text-white/40">
@@ -490,14 +513,14 @@ const NewCourseModal = memo(function NewCourseModal({ isOpen, onClose, onSuccess
                 type="button"
                 onClick={handleClose}
                 disabled={isSubmitting}
-                className="flex-1 px-5 py-3 rounded-xl bg-white/5 border border-white/10 text-white/80 font-medium hover:bg-white/10 hover:border-white/20 transition-all disabled:opacity-50"
+                className="flex-1 px-5 py-3 rounded-xl bg-white/5 border border-white/10 text-white/80 font-medium hover:bg-white/10 hover:border-white/20 transition-colors duration-150 disabled:opacity-50"
               >
                 Annulla
               </button>
               <button
                 type="submit"
                 disabled={isSubmitting || !link.trim()}
-                className="flex-1 px-5 py-3 rounded-xl bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white font-medium hover:shadow-lg hover:shadow-violet-500/25 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="flex-1 px-5 py-3 rounded-xl bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white font-medium hover:shadow-lg hover:shadow-violet-500/25 transition-shadow duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {isSubmitting ? (
                   <>
@@ -557,6 +580,9 @@ export default function Dashboard() {
   const [isLoadingCourses, setIsLoadingCourses] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [courseToDelete, setCourseToDelete] = useState<CoursesListResponse | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Funzione per caricare i corsi
   const fetchCourses = useCallback(async () => {
@@ -629,6 +655,42 @@ export default function Dashboard() {
     router.push(`/courses/${courseId}`);
   }, [router]);
 
+  // Handle delete course - open confirmation modal
+  const handleDeleteClick = useCallback((e: React.MouseEvent, course: CoursesListResponse) => {
+    e.stopPropagation(); // Prevent card click
+    setCourseToDelete(course);
+    setIsDeleteModalOpen(true);
+  }, []);
+
+  // Confirm delete course
+  const handleConfirmDelete = async () => {
+    if (!courseToDelete) return;
+
+    setIsDeleting(true);
+    console.log("[Dashboard] Deleting course:", courseToDelete.id);
+
+    const result = await deleteCourse(courseToDelete.id);
+
+    if (result.success) {
+      console.log("[Dashboard] Course deleted successfully");
+      // Remove course from list
+      setCourses(prevCourses => prevCourses.filter(c => c.id !== courseToDelete.id));
+      setIsDeleteModalOpen(false);
+      setCourseToDelete(null);
+    } else {
+      console.error("[Dashboard] Error deleting course:", result.error);
+      alert(result.error || "Errore durante l'eliminazione del corso");
+    }
+
+    setIsDeleting(false);
+  };
+
+  // Cancel delete
+  const handleCancelDelete = () => {
+    setIsDeleteModalOpen(false);
+    setCourseToDelete(null);
+  };
+
   // Calcola la durata totale di tutti i corsi
   const totalDuration = courses.reduce((acc, c) => acc + c.duration, 0);
 
@@ -678,7 +740,7 @@ export default function Dashboard() {
             </div>
             <button
               onClick={handleLogout}
-              className="rounded-xl bg-white/5 border border-white/10 px-4 py-2 text-white/80 transition-all hover:bg-white/10 hover:border-white/20"
+              className="rounded-xl bg-white/5 border border-white/10 px-4 py-2 text-white/80 transition-colors duration-150 hover:bg-white/10 hover:border-white/20"
             >
               Logout
             </button>
@@ -705,7 +767,7 @@ export default function Dashboard() {
               <button
                 onClick={handleRefresh}
                 disabled={isLoadingCourses}
-                className="flex items-center justify-center w-10 h-10 rounded-xl bg-white/5 border border-white/10 text-white/60 transition-all hover:bg-white/10 hover:border-white/20 hover:text-white disabled:opacity-50"
+                className="flex items-center justify-center w-10 h-10 rounded-xl bg-white/5 border border-white/10 text-white/60 transition-colors duration-150 hover:bg-white/10 hover:border-white/20 hover:text-white disabled:opacity-50"
                 title="Aggiorna corsi"
               >
                 <svg
@@ -757,7 +819,7 @@ export default function Dashboard() {
               {/* Add course button - always visible */}
               <button
                 onClick={handleOpenModal}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white font-medium hover:shadow-lg hover:shadow-violet-500/25 transition-all hover:scale-105"
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white font-medium hover:shadow-lg hover:shadow-violet-500/25 transition-[transform,shadow] duration-200 hover:scale-105 will-change-transform"
               >
                 <svg
                   className="w-5 h-5"
@@ -815,6 +877,7 @@ export default function Dashboard() {
                     course={course}
                     index={index}
                     onClick={() => handleCourseClick(course.id)}
+                    onDelete={(e) => handleDeleteClick(e, course)}
                   />
                 ))
               ) : isLoadingCourses ? (
@@ -859,6 +922,108 @@ export default function Dashboard() {
         onClose={handleCloseModal}
         onSuccess={handleCourseCreated}
       />
+
+      {/* Modal di conferma eliminazione */}
+      {isDeleteModalOpen && courseToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+            onClick={handleCancelDelete}
+          />
+
+          {/* Modal */}
+          <div className="relative z-10 w-full max-w-md bg-gradient-to-br from-black/95 to-black/90 border border-red-500/30 rounded-2xl p-6 shadow-2xl shadow-red-500/20 animate-in zoom-in-95 duration-200">
+            {/* Icon */}
+            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-red-500/20 to-orange-500/20 flex items-center justify-center mx-auto mb-4">
+              <svg
+                className="w-8 h-8 text-red-400"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                />
+              </svg>
+            </div>
+
+            {/* Title */}
+            <h3 className="text-xl font-bold text-white text-center mb-2">
+              Elimina Corso
+            </h3>
+
+            {/* Description */}
+            <p className="text-white/70 text-center mb-6">
+              Sei sicuro di voler eliminare il corso{" "}
+              <span className="font-semibold text-white">{courseToDelete.name}</span>?
+              <br />
+              <span className="text-red-400 text-sm">Questa azione non può essere annullata.</span>
+            </p>
+
+            {/* Buttons */}
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handleCancelDelete}
+                disabled={isDeleting}
+                className="flex-1 px-5 py-3 rounded-xl bg-white/5 border border-white/10 text-white/80 font-medium hover:bg-white/10 hover:border-white/20 transition-colors duration-150 disabled:opacity-50"
+              >
+                Annulla
+              </button>
+              <button
+                onClick={handleConfirmDelete}
+                disabled={isDeleting}
+                className="flex-1 px-5 py-3 rounded-xl bg-gradient-to-r from-red-500 to-red-600 text-white font-medium hover:shadow-lg hover:shadow-red-500/25 transition-shadow duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {isDeleting ? (
+                  <>
+                    <svg
+                      className="w-5 h-5 animate-spin"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      />
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      />
+                    </svg>
+                    Eliminazione...
+                  </>
+                ) : (
+                  <>
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                      />
+                    </svg>
+                    Elimina
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
