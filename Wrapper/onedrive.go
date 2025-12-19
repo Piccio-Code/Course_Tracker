@@ -22,6 +22,7 @@ type Onedrive struct {
 type Course struct {
 	Name     string       `json:"name"`
 	Duration int          `json:"duration"`
+	URL      string       `json:"url"`
 	Parts    []CoursePart `json:"parts"`
 	Files    []CourseFile `json:"files"`
 }
@@ -98,7 +99,7 @@ func (o *Onedrive) NewCourse(sharedFolderUrl string, name string) (*Course, erro
 		name = *driveItem.GetName()
 	}
 
-	course := &Course{Name: name, Parts: courseParts, Files: courseFiles, Duration: totalDuration}
+	course := &Course{Name: name, URL: sharedFolderUrl, Parts: courseParts, Files: courseFiles, Duration: totalDuration}
 
 	return course, nil
 }
@@ -145,10 +146,6 @@ func (o *Onedrive) GetCourseParts(items []models.DriveItemable) (courseParts []C
 		courseParts = append(courseParts, CoursePart{Name: PartName, Files: partFile, SubParts: subParts, Duration: partDuration})
 	}
 
-	if courseParts == nil {
-		return nil, nil, 0, fmt.Errorf("no folder found in the directory")
-	}
-
 	return courseParts, courseFiles, totalDuration, nil
 }
 
@@ -184,10 +181,6 @@ func (o *Onedrive) GetPart(folder models.DriveItemable) (subParts []CoursePart, 
 			partFiles = append(partFiles, courseFile)
 			totalDuration += courseFile.Duration
 		}
-	}
-
-	if partFiles == nil {
-		return nil, nil, 0, fmt.Errorf("the are no file in the directory")
 	}
 
 	return subParts, partFiles, totalDuration, nil

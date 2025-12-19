@@ -136,7 +136,7 @@ func (app *Application) ModifyUser(w http.ResponseWriter, r *http.Request) {
 
 func (app *Application) CreateCourse(w http.ResponseWriter, r *http.Request) {
 
-	course, err := app.GetCourseFormLink(r)
+	courseForm, err := app.GetCourseForm(r)
 
 	if err != nil {
 		app.ErrorLog.Println(err)
@@ -148,6 +148,14 @@ func (app *Application) CreateCourse(w http.ResponseWriter, r *http.Request) {
 
 	if !ok {
 		http.Error(w, "Error parsing the User id", http.StatusBadRequest)
+		return
+	}
+
+	course, err := app.Onedrive.NewCourse(courseForm.URL, courseForm.Name)
+
+	if err != nil {
+		app.ErrorLog.Println(err)
+		http.Error(w, "Error getting the course from onedrive", http.StatusBadRequest)
 		return
 	}
 
@@ -215,7 +223,7 @@ func (app *Application) ViewCourse(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		app.ErrorLog.Println(err)
-		http.Error(w, "Error retring the course from the db", http.StatusBadRequest)
+		http.Error(w, "Error retrieving the course from the db", http.StatusBadRequest)
 		return
 	}
 
@@ -223,7 +231,7 @@ func (app *Application) ViewCourse(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		app.ErrorLog.Println(err)
-		http.Error(w, "Error retring the course from the db", http.StatusBadRequest)
+		http.Error(w, "Error retrieving the course from the db", http.StatusBadRequest)
 		return
 	}
 
@@ -279,7 +287,7 @@ func (app *Application) UpdateCourse(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	course, err := app.GetCourseFormLink(r)
+	courseForm, err := app.GetCourseForm(r)
 
 	if err != nil {
 		app.ErrorLog.Println(err)
@@ -291,6 +299,26 @@ func (app *Application) UpdateCourse(w http.ResponseWriter, r *http.Request) {
 
 	if !ok {
 		http.Error(w, "Error parsing the User id", http.StatusBadRequest)
+		return
+	}
+
+	if courseForm.URL == "" {
+		course, err := app.CourseModel.Get(r.Context(), id, userId)
+
+		if err != nil {
+			app.ErrorLog.Println(err)
+			http.Error(w, "Course do not exist", http.StatusBadRequest)
+			return
+		}
+
+		courseForm.URL = course.URL
+	}
+
+	course, err := app.Onedrive.NewCourse(courseForm.URL, courseForm.Name)
+
+	if err != nil {
+		app.ErrorLog.Println(err)
+		http.Error(w, "Error getting the course from onedrive", http.StatusBadRequest)
 		return
 	}
 

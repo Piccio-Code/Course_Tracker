@@ -38,7 +38,7 @@ const CourseCard = memo(function CourseCard({ course, index, onClick, onDelete }
 
   return (
     <div
-      className="group relative animate-in fade-in slide-in-from-bottom-4"
+      className="group relative animate-in fade-in slide-in-from-bottom-4 w-full md:w-[calc(50%-0.75rem)] lg:w-[calc(33.333%-1rem)]"
       style={{ animationDelay: `${index * 100}ms`, animationFillMode: "both" }}
       onClick={onClick}
     >
@@ -867,7 +867,7 @@ export default function Dashboard() {
               </div>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="flex flex-wrap justify-center gap-6">
               {error ? (
                 <ErrorState onRetry={handleRefresh} />
               ) : courses.length > 0 ? (

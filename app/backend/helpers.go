@@ -1,7 +1,6 @@
 package main
 
 import (
-	. "github.com/Piccio-Code/Course_Tracker/Wrapper"
 	"github.com/ajg/form"
 	"net/http"
 )
@@ -27,17 +26,15 @@ type UserModifyForm struct {
 	Email    string `form:"email"`
 }
 
-func (app *Application) GetCourseFormLink(r *http.Request) (course *Course, err error) {
+func (app *Application) GetCourseForm(r *http.Request) (courseForm CourseForm, err error) {
 	decoder := form.NewDecoder(r.Body)
-
-	var courseForm CourseForm
 
 	if err := decoder.Decode(&courseForm); err != nil {
 		app.ErrorLog.Println(err)
-		return nil, err
+		return CourseForm{}, err
 	}
 
-	return app.Onedrive.NewCourse(courseForm.URL, courseForm.Name)
+	return courseForm, nil
 }
 
 func (app *Application) GetUserFrom(r *http.Request) (user UserForm, err error) {
