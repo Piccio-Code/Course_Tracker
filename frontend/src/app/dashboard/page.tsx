@@ -7,6 +7,7 @@ import {
   getCourses,
   createCourse,
   deleteCourse,
+  reloadCourse,
   formatDuration,
   formatDate,
   timeAgo,
@@ -31,9 +32,10 @@ interface CourseCardProps {
   index: number;
   onClick: () => void;
   onDelete: (e: React.MouseEvent) => void;
+  onReload: (e: React.MouseEvent) => void;
 }
 
-const CourseCard = memo(function CourseCard({ course, index, onClick, onDelete }: CourseCardProps) {
+const CourseCard = memo(function CourseCard({ course, index, onClick, onDelete, onReload }: CourseCardProps) {
   const colorSet = courseColors[index % courseColors.length];
 
   return (
@@ -54,26 +56,50 @@ const CourseCard = memo(function CourseCard({ course, index, onClick, onDelete }
           className={`h-1.5 bg-gradient-to-r ${colorSet.from} ${colorSet.to}`}
         />
 
-        {/* Delete button */}
-        <button
-          onClick={onDelete}
-          className="absolute top-4 right-4 z-10 w-8 h-8 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 hover:bg-red-500/20 hover:border-red-500/40 hover:text-red-300 transition-colors duration-150 opacity-0 group-hover:opacity-100"
-          title="Elimina corso"
-        >
-          <svg
-            className="w-4 h-4"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
+        {/* Action buttons */}
+        <div className="absolute top-4 right-4 z-10 flex items-center gap-2 opacity-0 group-hover:opacity-100">
+          {/* Reload button */}
+          <button
+            onClick={onReload}
+            className="w-8 h-8 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 hover:bg-blue-500/20 hover:border-blue-500/40 hover:text-blue-300 transition-colors duration-150"
+            title="Ricarica corso"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-            />
-          </svg>
-        </button>
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+              />
+            </svg>
+          </button>
+
+          {/* Delete button */}
+          <button
+            onClick={onDelete}
+            className="w-8 h-8 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 hover:bg-red-500/20 hover:border-red-500/40 hover:text-red-300 transition-colors duration-150"
+            title="Elimina corso"
+          >
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+              />
+            </svg>
+          </button>
+        </div>
 
         <div className="p-6">
           {/* Course name */}
@@ -583,6 +609,9 @@ export default function Dashboard() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [courseToDelete, setCourseToDelete] = useState<CoursesListResponse | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isReloadModalOpen, setIsReloadModalOpen] = useState(false);
+  const [courseToReload, setCourseToReload] = useState<CoursesListResponse | null>(null);
+  const [isReloading, setIsReloading] = useState(false);
 
   // Funzione per caricare i corsi
   const fetchCourses = useCallback(async () => {
@@ -689,6 +718,42 @@ export default function Dashboard() {
   const handleCancelDelete = () => {
     setIsDeleteModalOpen(false);
     setCourseToDelete(null);
+  };
+
+  // Handle reload course - open confirmation modal
+  const handleReloadClick = useCallback((e: React.MouseEvent, course: CoursesListResponse) => {
+    e.stopPropagation(); // Prevent card click
+    setCourseToReload(course);
+    setIsReloadModalOpen(true);
+  }, []);
+
+  // Confirm reload course
+  const handleConfirmReload = async () => {
+    if (!courseToReload) return;
+
+    setIsReloading(true);
+    console.log("[Dashboard] Reloading course:", courseToReload.id);
+
+    const result = await reloadCourse(courseToReload.id);
+
+    if (result.success) {
+      console.log("[Dashboard] Course reloaded successfully");
+      // Refresh courses list to get updated data
+      await fetchCourses();
+      setIsReloadModalOpen(false);
+      setCourseToReload(null);
+    } else {
+      console.error("[Dashboard] Error reloading course:", result.error);
+      alert(result.error || "Errore durante il ricaricamento del corso");
+    }
+
+    setIsReloading(false);
+  };
+
+  // Cancel reload
+  const handleCancelReload = () => {
+    setIsReloadModalOpen(false);
+    setCourseToReload(null);
   };
 
   // Calcola la durata totale di tutti i corsi
@@ -878,6 +943,7 @@ export default function Dashboard() {
                     index={index}
                     onClick={() => handleCourseClick(course.id)}
                     onDelete={(e) => handleDeleteClick(e, course)}
+                    onReload={(e) => handleReloadClick(e, course)}
                   />
                 ))
               ) : isLoadingCourses ? (
@@ -1017,6 +1083,110 @@ export default function Dashboard() {
                       />
                     </svg>
                     Elimina
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal di conferma ricaricamento */}
+      {isReloadModalOpen && courseToReload && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+            onClick={handleCancelReload}
+          />
+
+          {/* Modal */}
+          <div className="relative z-10 w-full max-w-md bg-gradient-to-br from-black/95 to-black/90 border border-blue-500/30 rounded-2xl p-6 shadow-2xl shadow-blue-500/20 animate-in zoom-in-95 duration-200">
+            {/* Icon */}
+            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500/20 to-cyan-500/20 flex items-center justify-center mx-auto mb-4">
+              <svg
+                className="w-8 h-8 text-blue-400"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                />
+              </svg>
+            </div>
+
+            {/* Title */}
+            <h3 className="text-xl font-bold text-white text-center mb-2">
+              Ricarica Corso
+            </h3>
+
+            {/* Description */}
+            <p className="text-white/70 text-center mb-6">
+              Vuoi ricaricare il corso{" "}
+              <span className="font-semibold text-white">{courseToReload.name}</span>?
+              <br />
+              <span className="text-blue-400 text-sm">
+                Questo aggiornerà tutti i contenuti dal OneDrive.
+              </span>
+            </p>
+
+            {/* Buttons */}
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handleCancelReload}
+                disabled={isReloading}
+                className="flex-1 px-5 py-3 rounded-xl bg-white/5 border border-white/10 text-white/80 font-medium hover:bg-white/10 hover:border-white/20 transition-colors duration-150 disabled:opacity-50"
+              >
+                Annulla
+              </button>
+              <button
+                onClick={handleConfirmReload}
+                disabled={isReloading}
+                className="flex-1 px-5 py-3 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium hover:shadow-lg hover:shadow-blue-500/25 transition-shadow duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {isReloading ? (
+                  <>
+                    <svg
+                      className="w-5 h-5 animate-spin"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      />
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      />
+                    </svg>
+                    Ricaricamento...
+                  </>
+                ) : (
+                  <>
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                      />
+                    </svg>
+                    Ricarica
                   </>
                 )}
               </button>

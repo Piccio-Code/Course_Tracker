@@ -17,7 +17,6 @@ type CourseResponse struct {
 	CourseResources Course    `json:"courseResources"`
 	Created         time.Time `json:"created"`
 	LastUpdated     time.Time `json:"lastUpdated"`
-	URL             string    `json:"url"`
 }
 
 type CoursesListResponse struct {
@@ -38,7 +37,7 @@ func (m *CourseModel) Insert(ctx context.Context, course *Course, userId int) (i
 
 	defer tx.Rollback(ctx)
 
-	stmt := `INSERT INTO courses(course_resources, user_id, url) VALUES ($1, $2, $3) returning id`
+	stmt := `INSERT INTO courses(course_resources, user_id) VALUES ($1, $2) returning id`
 
 	data, err := json.Marshal(course)
 
@@ -46,7 +45,7 @@ func (m *CourseModel) Insert(ctx context.Context, course *Course, userId int) (i
 		return 0, err
 	}
 
-	err = tx.QueryRow(ctx, stmt, data, userId, course.URL).Scan(&id)
+	err = tx.QueryRow(ctx, stmt, data, userId).Scan(&id)
 
 	if err != nil {
 		return 0, err
@@ -70,11 +69,11 @@ func (m *CourseModel) Get(ctx context.Context, id int, userId int) (course Cours
 
 	defer tx.Rollback(ctx)
 
-	stmt := `SELECT id, course_resources, created_at, last_updated, url FROM courses WHERE id = $1 AND user_id = $2`
+	stmt := `SELECT id, course_resources, created_at, last_updated FROM courses WHERE id = $1 AND user_id = $2`
 
 	var data []byte
 
-	err = tx.QueryRow(ctx, stmt, id, userId).Scan(&course.ID, &data, &course.Created, &course.LastUpdated, &course.URL)
+	err = tx.QueryRow(ctx, stmt, id, userId).Scan(&course.ID, &data, &course.Created, &course.LastUpdated)
 
 	if err != nil {
 		return CourseResponse{}, err

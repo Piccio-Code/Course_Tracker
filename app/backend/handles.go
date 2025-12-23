@@ -311,7 +311,11 @@ func (app *Application) UpdateCourse(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		courseForm.URL = course.URL
+		courseForm.URL = course.CourseResources.URL
+
+		if courseForm.Name == "" {
+			courseForm.Name = course.CourseResources.Name
+		}
 	}
 
 	course, err := app.Onedrive.NewCourse(courseForm.URL, courseForm.Name)

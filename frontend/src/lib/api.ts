@@ -440,6 +440,42 @@ export async function updateCourse(
 }
 
 /**
+ * Ricarica un corso esistente dal OneDrive
+ * PUT /courses/{id} (protected)
+ * Non richiede il link, il backend lo recupera automaticamente dal database
+ */
+export async function reloadCourse(id: number): Promise<ApiResult<{ id: number }>> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/courses/${id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: new URLSearchParams().toString(), // Empty body, backend will use stored URL
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      return {
+        success: false,
+        error: errorText || "Errore durante il ricaricamento del corso",
+      };
+    }
+
+    return { success: true, data: { id } };
+  } catch (err) {
+    return {
+      success: false,
+      error:
+        err instanceof Error
+          ? err.message
+          : "Errore durante il ricaricamento del corso",
+    };
+  }
+}
+
+/**
  * Elimina un corso
  * DELETE /courses/{id} (protected)
  */
