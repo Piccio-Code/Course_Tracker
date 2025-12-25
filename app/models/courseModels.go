@@ -143,7 +143,15 @@ func (m *CourseModel) Delete(ctx context.Context, id int, userId int) error {
 
 	defer tx.Rollback(ctx)
 
-	stmt := `DELETE FROM courses WHERE id = $1 AND user_id = $2`
+	stmt := `DELETE FROM users_progress WHERE course_id = $1`
+
+	_, err = tx.Exec(ctx, stmt, id)
+
+	if err != nil {
+		return err
+	}
+
+	stmt = `DELETE FROM courses WHERE id = $1 AND user_id = $2`
 
 	_, err = tx.Exec(ctx, stmt, id, userId)
 

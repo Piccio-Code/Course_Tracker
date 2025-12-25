@@ -1,5 +1,5 @@
 // Configurazione API - Modifica qui l'URL base del backend https://api.coursetracker.it o http://localhost:8080
-export const API_BASE_URL = "https://api.coursetracker.it";
+export const API_BASE_URL = "http://localhost:8080";
 
 // ============================================================================
 // INTERFACES - Matching Go structures from Wrapper/onedrive.go

@@ -18,11 +18,15 @@ import (
 )
 
 type Application struct {
-	Onedrive       *Onedrive
-	ErrorLog       *log.Logger
-	InfoLog        *log.Logger
-	CourseModel    *CourseModel
-	UserModel      *UserModel
+	Onedrive *Onedrive
+
+	ErrorLog *log.Logger
+	InfoLog  *log.Logger
+
+	CourseModel   *CourseModel
+	UserModel     *UserModel
+	ProgressModel *ProgressModel
+
 	SessionManager *scs.SessionManager
 	Cors           *cors.Cors
 }
@@ -83,6 +87,7 @@ func main() {
 		InfoLog:        infoLog,
 		CourseModel:    &CourseModel{DB: dbPool},
 		UserModel:      &UserModel{DB: dbPool},
+		ProgressModel:  &ProgressModel{DB: dbPool},
 		SessionManager: sessionManager,
 		Cors:           cors.New(corsOptions),
 	}

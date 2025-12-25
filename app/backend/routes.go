@@ -27,5 +27,8 @@ func (app *Application) routes() http.Handler {
 
 	mux.Handle("DELETE /courses/{id}", protect.ThenFunc(app.DeleteCourse))
 
+	mux.Handle("GET /progress", protect.ThenFunc(app.GetProgress))
+	mux.Handle("GET /progress/{id}", protect.ThenFunc(app.GetCourseProgress))
+
 	return standardMiddleware.Then(mux)
 }

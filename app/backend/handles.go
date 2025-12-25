@@ -336,3 +336,64 @@ func (app *Application) UpdateCourse(w http.ResponseWriter, r *http.Request) {
 
 	http.Redirect(w, r, fmt.Sprintf("/courses/%d", id), http.StatusSeeOther)
 }
+
+func (app *Application) GetCourseProgress(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.Atoi(r.PathValue("id"))
+
+	if err != nil {
+		app.ErrorLog.Println(err)
+		http.Error(w, "Error converting the id", http.StatusBadRequest)
+		return
+	}
+
+	if id < -1 {
+		http.Error(w, "Error the id must be greater or equal to 1", http.StatusBadRequest)
+		return
+	}
+
+	userId, ok := r.Context().Value(CurrentUserIdKey).(int)
+
+	if !ok {
+		http.Error(w, "Error parsing the User id", http.StatusBadRequest)
+		return
+	}
+
+	progress, err := app.ProgressModel.GetCourseProgress(r.Context(), id, userId)
+
+	if err != nil {
+		app.ErrorLog.Println(err)
+		http.Error(w, "Error getting the course progress", http.StatusBadRequest)
+		return
+	}
+
+	pretty, err := json.MarshalIndent(progress, "", "\t")
+
+	if err != nil {
+		app.ErrorLog.Println(err)
+		http.Error(w, "Error retrieving the course from the db", http.StatusBadRequest)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintln(w, string(pretty))
+}
+
+func (app *Application) GetProgress(w http.ResponseWriter, r *http.Request) {
+	userId, ok := r.Context().Value(CurrentUserIdKey).(int)
+
+	if !ok {
+		http.Error(w, "Error parsing the User id", http.StatusBadRequest)
+		return
+	}
+
+	progress, err := app.ProgressModel.GetProgresses(r.Context(), userId)
+
+	if err != nil {
+		app.ErrorLog.Println(err)
+		http.Error(w, "Error getting the course progress", http.StatusBadRequest)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintln(w, progress)
+}
