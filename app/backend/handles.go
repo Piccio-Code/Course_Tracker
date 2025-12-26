@@ -378,6 +378,127 @@ func (app *Application) GetCourseProgress(w http.ResponseWriter, r *http.Request
 	fmt.Fprintln(w, string(pretty))
 }
 
+func (app *Application) InsertCourseProgress(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.Atoi(r.PathValue("id"))
+
+	if err != nil {
+		app.ErrorLog.Println(err)
+		http.Error(w, "Error converting the id", http.StatusBadRequest)
+		return
+	}
+
+	if id < -1 {
+		http.Error(w, "Error the id must be greater or equal to 1", http.StatusBadRequest)
+		return
+	}
+
+	userId, ok := r.Context().Value(CurrentUserIdKey).(int)
+
+	if !ok {
+		http.Error(w, "Error parsing the User id", http.StatusBadRequest)
+		return
+	}
+
+	progressForm, err := app.GetProgressForm(r)
+
+	if err != nil {
+		app.ErrorLog.Println(err)
+		http.Error(w, "Error parsing the body", http.StatusBadRequest)
+		return
+	}
+
+	err = app.ProgressModel.Insert(r.Context(), id, userId, progressForm.WatchedTimeMills, progressForm.Completed, progressForm.URL)
+
+	if err != nil {
+		app.ErrorLog.Println(err)
+		http.Error(w, "Error Inserting the course progress", http.StatusBadRequest)
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
+	fmt.Fprintln(w, "Created successfully!")
+}
+
+func (app *Application) UpdateCourseProgress(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.Atoi(r.PathValue("id"))
+
+	if err != nil {
+		app.ErrorLog.Println(err)
+		http.Error(w, "Error converting the id", http.StatusBadRequest)
+		return
+	}
+
+	if id < -1 {
+		http.Error(w, "Error the id must be greater or equal to 1", http.StatusBadRequest)
+		return
+	}
+
+	userId, ok := r.Context().Value(CurrentUserIdKey).(int)
+
+	if !ok {
+		http.Error(w, "Error parsing the User id", http.StatusBadRequest)
+		return
+	}
+
+	progressForm, err := app.GetProgressForm(r)
+
+	if err != nil {
+		app.ErrorLog.Println(err)
+		http.Error(w, "Error parsing the body", http.StatusBadRequest)
+		return
+	}
+
+	err = app.ProgressModel.Update(r.Context(), id, userId, progressForm.WatchedTimeMills, progressForm.Completed, progressForm.URL)
+
+	if err != nil {
+		app.ErrorLog.Println(err)
+		http.Error(w, "Error Inserting the course progress", http.StatusBadRequest)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (app *Application) DeleteCourseProgress(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.Atoi(r.PathValue("id"))
+
+	if err != nil {
+		app.ErrorLog.Println(err)
+		http.Error(w, "Error converting the id", http.StatusBadRequest)
+		return
+	}
+
+	if id < -1 {
+		http.Error(w, "Error the id must be greater or equal to 1", http.StatusBadRequest)
+		return
+	}
+
+	userId, ok := r.Context().Value(CurrentUserIdKey).(int)
+
+	if !ok {
+		http.Error(w, "Error parsing the User id", http.StatusBadRequest)
+		return
+	}
+
+	progressForm, err := app.GetProgressForm(r)
+
+	if err != nil {
+		app.ErrorLog.Println(err)
+		http.Error(w, "Error parsing the body", http.StatusBadRequest)
+		return
+	}
+
+	err = app.ProgressModel.Delete(r.Context(), id, userId, progressForm.URL)
+
+	if err != nil {
+		app.ErrorLog.Println(err)
+		http.Error(w, "Error Inserting the course progress", http.StatusBadRequest)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func (app *Application) GetProgress(w http.ResponseWriter, r *http.Request) {
 	userId, ok := r.Context().Value(CurrentUserIdKey).(int)
 

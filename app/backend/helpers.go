@@ -26,6 +26,23 @@ type UserModifyForm struct {
 	Email    string `form:"email"`
 }
 
+type ProgressForm struct {
+	WatchedTimeMills int    `form:"watched_time_mills"`
+	Completed        bool   `form:"completed"`
+	URL              string `form:"url"`
+}
+
+func (app *Application) GetProgressForm(r *http.Request) (progressForm ProgressForm, err error) {
+	decoder := form.NewDecoder(r.Body)
+
+	if err := decoder.Decode(&progressForm); err != nil {
+		app.ErrorLog.Println(err)
+		return ProgressForm{}, err
+	}
+
+	return progressForm, nil
+}
+
 func (app *Application) GetCourseForm(r *http.Request) (courseForm CourseForm, err error) {
 	decoder := form.NewDecoder(r.Body)
 

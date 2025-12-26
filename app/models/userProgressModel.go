@@ -16,7 +16,7 @@ type ResourceProgress struct {
 	URL         string `json:"url,omitempty"`
 }
 
-func (p *ProgressModel) Complete(ctx context.Context, courseId, userId int, url string) error {
+func (p *ProgressModel) Insert(ctx context.Context, courseId, userId, watchedTimeMills int, completed bool, url string) error {
 	tx, err := p.DB.Begin(ctx)
 
 	if err != nil {
@@ -25,9 +25,9 @@ func (p *ProgressModel) Complete(ctx context.Context, courseId, userId int, url 
 
 	defer tx.Rollback(ctx)
 
-	stmt := `INSERT INTO users_progress(completed, course_id, user_id, resource_url) VALUES ($1, $2, $3, $4)`
+	stmt := `INSERT INTO users_progress(time_watched, completed, course_id, user_id, resource_url) VALUES ($1, $2, $3, $4, $5)`
 
-	_, err = tx.Exec(ctx, stmt, true, courseId, userId, url)
+	_, err = tx.Exec(ctx, stmt, watchedTimeMills, completed, courseId, userId, url)
 
 	if err != nil {
 		return err
@@ -36,7 +36,7 @@ func (p *ProgressModel) Complete(ctx context.Context, courseId, userId int, url 
 	return tx.Commit(ctx)
 }
 
-func (p *ProgressModel) Update(ctx context.Context, courseId, userId, watchedTimeMills int, url string) error {
+func (p *ProgressModel) Update(ctx context.Context, courseId, userId, watchedTimeMills int, completed bool, url string) error {
 	tx, err := p.DB.Begin(ctx)
 
 	if err != nil {
@@ -45,9 +45,11 @@ func (p *ProgressModel) Update(ctx context.Context, courseId, userId, watchedTim
 
 	defer tx.Rollback(ctx)
 
-	stmt := `INSERT INTO users_progress(time_watched, course_id, user_id, resource_url) VALUES ($1, $2, $3, $4)`
+	stmt := `UPDATE users_progress 
+			 SET time_watched = $1, completed = $2
+			 WHERE course_id = $3 AND user_id = $4 AND resource_url = $5`
 
-	_, err = tx.Exec(ctx, stmt, watchedTimeMills, courseId, userId, url)
+	_, err = tx.Exec(ctx, stmt, watchedTimeMills, completed, courseId, userId, url)
 
 	if err != nil {
 		return err
@@ -56,7 +58,7 @@ func (p *ProgressModel) Update(ctx context.Context, courseId, userId, watchedTim
 	return tx.Commit(ctx)
 }
 
-func (p *ProgressModel) Remove(ctx context.Context, courseId, userId int, url string) error {
+func (p *ProgressModel) Delete(ctx context.Context, courseId, userId int, url string) error {
 	tx, err := p.DB.Begin(ctx)
 
 	if err != nil {
