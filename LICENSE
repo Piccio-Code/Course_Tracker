@@ -1,22 +1,54 @@
-MIT License
+PROPRIETARY SOFTWARE LICENSE
 
-Copyright (c) 2024-2025 Piccio-Code
+Copyright (c) 2024-2025 Piccio-Code. All Rights Reserved.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+This software and associated documentation files (the "Software") are the 
+exclusive property of Piccio-Code. All rights are reserved.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+GRANT OF LICENSE:
+The author grants you a personal, non-exclusive, non-transferable, revocable 
+license to USE the Software free of charge for personal, educational, or 
+commercial purposes, subject to the restrictions below.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+RESTRICTIONS:
+You are NOT permitted to:
+- Copy, reproduce, or duplicate the Software or any portion thereof
+- Modify, adapt, translate, or create derivative works based on the Software
+- Distribute, sublicense, lease, rent, loan, or transfer the Software to any third party
+- Reverse engineer, decompile, or disassemble the Software
+- Remove or alter any proprietary notices, labels, or marks on the Software
+- Use the Software to create competing products or services
+- Publish, share, or make available the source code in any form
+
+OWNERSHIP:
+The Software is licensed, not sold. This License does not grant you any rights 
+to trademarks, service marks, or logos of Piccio-Code. The Software contains 
+proprietary information and materials that are protected by copyright and other 
+intellectual property laws.
+
+DISCLAIMER OF WARRANTY:
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. THE AUTHOR DOES NOT 
+WARRANT THAT THE SOFTWARE WILL MEET YOUR REQUIREMENTS OR THAT THE OPERATION 
+OF THE SOFTWARE WILL BE UNINTERRUPTED OR ERROR-FREE.
+
+LIMITATION OF LIABILITY:
+IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER 
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE 
+SOFTWARE. YOU USE THE SOFTWARE AT YOUR OWN RISK.
+
+TERMINATION:
+This License is effective until terminated. Your rights under this License 
+will terminate automatically without notice if you fail to comply with any 
+of its terms. Upon termination, you must cease all use of the Software.
+
+GOVERNING LAW:
+This License shall be governed by and construed in accordance with applicable 
+international copyright laws.
+
+BY USING THIS SOFTWARE, YOU ACKNOWLEDGE THAT YOU HAVE READ THIS LICENSE, 
+UNDERSTAND IT, AND AGREE TO BE BOUND BY ITS TERMS AND CONDITIONS.
+
 

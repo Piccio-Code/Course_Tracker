@@ -510,7 +510,9 @@ go test ./...
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under a **Proprietary License** with free usage rights. You may use this software for free, but you **cannot** copy, modify, or distribute the source code. See the [LICENSE](LICENSE) file for full details.
+
+**All Rights Reserved** - Copyright © 2024-2025 Piccio-Code
 
 ## ⚠️ Disclaimer
 
@@ -528,7 +530,7 @@ This code is the intellectual property of the author. All rights reserved.
 
 ## 🌟 Contributing
 
-This is a personal project, but suggestions and feedback are welcome! Feel free to open an issue if you find bugs or have feature requests.
+This is a closed-source personal project. While you cannot contribute code directly, suggestions and feedback are welcome! Feel free to open an issue if you find bugs or have feature requests.
 
 ## 📧 Contact
 
@@ -537,4 +539,5 @@ For questions or inquiries, please open an issue on GitHub.
 ---
 
 **⭐ If you find this project useful, consider giving it a star!**
+
 
