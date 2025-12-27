@@ -16,6 +16,13 @@ type ResourceProgress struct {
 	URL         string `json:"url,omitempty"`
 }
 
+type Progress struct {
+	CourseName      string `json:"course_name,omitempty"`
+	CourseId        int    `json:"course_id,omitempty"`
+	CourseTotalTime int    `json:"course_total_time,omitempty"`
+	TimeWatched     int    `json:"time_watched,omitempty"`
+}
+
 func (p *ProgressModel) Insert(ctx context.Context, courseId, userId, watchedTimeMills int, completed bool, url string) error {
 	tx, err := p.DB.Begin(ctx)
 
@@ -117,7 +124,7 @@ func (p *ProgressModel) GetCourseProgress(ctx context.Context, courseId, userId 
 	return courseProgress, nil
 }
 
-func (p *ProgressModel) GetProgresses(ctx context.Context, userId int) (progressMap map[string][]ResourceProgress, err error) {
+func (p *ProgressModel) GetProgresses(ctx context.Context, userId int) (userProgress []Progress, err error) {
 
 	tx, err := p.DB.Begin(ctx)
 
@@ -127,10 +134,11 @@ func (p *ProgressModel) GetProgresses(ctx context.Context, userId int) (progress
 
 	defer tx.Rollback(ctx)
 
-	stmt := `SELECT p.id, time_watched, completed, resource_url, c.course_resources->'name'
-			 FROM users_progress p
-			 JOIN courses c on c.id = p.course_id
-			 WHERE p.user_id=$1`
+	stmt := `SELECT c.course_resources->'name', sum(time_watched), c.id, c.course_resources->'duration'
+				FROM users_progress p
+				JOIN courses c on c.id = p.course_id
+				WHERE p.user_id=$1
+			GROUP BY c.course_resources->'name', c.id, c.course_resources->'duration'`
 
 	rows, err := tx.Query(ctx, stmt, userId)
 
@@ -138,24 +146,21 @@ func (p *ProgressModel) GetProgresses(ctx context.Context, userId int) (progress
 		return nil, err
 	}
 
-	progressMap = make(map[string][]ResourceProgress)
-
 	for rows.Next() {
-		var course string
-		var progress ResourceProgress
+		var progress Progress
 
-		err := rows.Scan(&progress.ID, &progress.TimeWatched, &progress.Completed, &progress.URL, &course)
+		err := rows.Scan(&progress.CourseName, &progress.TimeWatched, &progress.CourseId, &progress.CourseTotalTime)
 
 		if err != nil {
 			return nil, err
 		}
 
-		progressMap[course] = append(progressMap[course], progress)
+		userProgress = append(userProgress, progress)
 	}
 
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
 
-	return progressMap, nil
+	return userProgress, nil
 }
