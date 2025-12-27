@@ -179,8 +179,6 @@ const VideoPlayer = memo(function VideoPlayer({ file, sectionName, videoKey, onU
     file.format.toLowerCase()
   );
   const videoRef = useRef<HTMLVideoElement>(null);
-  const lastSavedTimeRef = useRef<number>(0);
-  const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Set initial time when video is loaded
   useEffect(() => {
@@ -199,18 +197,20 @@ const VideoPlayer = memo(function VideoPlayer({ file, sectionName, videoKey, onU
     }
   };
 
-  // Handle video time update (for progress tracking)
-  const handleTimeUpdate = useCallback((e: React.SyntheticEvent<HTMLVideoElement>) => {
+  // Handle video pause - save progress when user pauses
+  const handleVideoPause = useCallback((e: React.SyntheticEvent<HTMLVideoElement>) => {
     const video = e.currentTarget;
     const currentTime = video.currentTime * 1000; // Convert to milliseconds
-    
-    // Save progress every 10 seconds
-    if (currentTime - lastSavedTimeRef.current > 10000) {
-      lastSavedTimeRef.current = currentTime;
-      onVideoProgress(file.url, currentTime);
-    }
-    
-    // DON'T mark as completed here - let the video finish and trigger onEnded event
+    console.log('[VideoPlayer] Video paused, saving progress:', currentTime);
+    onVideoProgress(file.url, currentTime);
+  }, [file.url, onVideoProgress]);
+
+  // Handle video seeking - save progress when user changes video position
+  const handleVideoSeeking = useCallback((e: React.SyntheticEvent<HTMLVideoElement>) => {
+    const video = e.currentTarget;
+    const currentTime = video.currentTime * 1000; // Convert to milliseconds
+    console.log('[VideoPlayer] Video seeking, saving progress:', currentTime);
+    onVideoProgress(file.url, currentTime);
   }, [file.url, onVideoProgress]);
 
   // Handle video ended
@@ -221,15 +221,6 @@ const VideoPlayer = memo(function VideoPlayer({ file, sectionName, videoKey, onU
       onVideoComplete(file.url, duration);
     }
   }, [file.url, onVideoComplete]);
-
-  // Cleanup interval on unmount
-  useEffect(() => {
-    return () => {
-      if (progressIntervalRef.current) {
-        clearInterval(progressIntervalRef.current);
-      }
-    };
-  }, []);
 
   return (
     <div className="flex flex-col py-4 sm:py-6">
@@ -247,7 +238,8 @@ const VideoPlayer = memo(function VideoPlayer({ file, sectionName, videoKey, onU
                 src={file.url}
                 preload="metadata"
                 onError={handleVideoError}
-                onTimeUpdate={handleTimeUpdate}
+                onPause={handleVideoPause}
+                onSeeking={handleVideoSeeking}
                 onEnded={handleVideoEnded}
               >
                 <source src={file.url} type={`video/${file.format.toLowerCase()}`} />
@@ -472,7 +464,7 @@ interface SectionItemProps {
   isExpanded: boolean;
   onToggle: () => void;
   selectedFileUrl: string | null;
-  onFileSelect: (file: CourseFile, sectionName: string) => void;
+  onFileSelect: (file: CourseFile, sectionName: string) => void | Promise<void>;
   debouncedSearchQuery: string;
   videoProgress: Map<string, ResourceProgress>;
 }
@@ -721,7 +713,6 @@ export default function CourseViewerPage() {
   const [videoKey, setVideoKey] = useState(0);
   const [videoProgress, setVideoProgress] = useState<Map<string, ResourceProgress>>(new Map());
   const [completedVideos, setCompletedVideos] = useState<Set<string>>(new Set());
-  const currentVideoRef = useRef<string | null>(null);
   const hasNavigatedToFirstIncomplete = useRef(false);
 
   useEffect(() => {
@@ -829,16 +820,55 @@ export default function CourseViewerPage() {
     });
   }, []);
 
+  // Helper function to save current video progress
+  const saveCurrentVideoProgress = useCallback(async () => {
+    if (!selectedFile) return;
+    
+    const videoElement = document.querySelector('video') as HTMLVideoElement;
+    if (!videoElement) return;
+    
+    const currentTime = videoElement.currentTime * 1000; // Convert to milliseconds
+    const isCompleted = completedVideos.has(selectedFile.file.url);
+    
+    // Don't save if video is already completed
+    if (isCompleted) return;
+    
+    // Only save if there's meaningful progress (more than 1 second)
+    if (currentTime < 1000) return;
+    
+    console.log(`[CourseViewer] Saving progress on video change/exit:`, selectedFile.file.name, currentTime);
+    
+    // Check if progress already exists
+    const existingProgress = videoProgress.get(selectedFile.file.url);
+    const isExisting = existingProgress !== undefined;
+    
+    // Update local state
+    setVideoProgress(prev => new Map(prev).set(selectedFile.file.url, { 
+      ...prev.get(selectedFile.file.url),
+      time_watched: currentTime,
+      url: selectedFile.file.url
+    }));
+    
+    // Save to backend
+    const result = await saveCourseProgress(courseId, selectedFile.file.url, Math.round(currentTime), false, isExisting);
+    if (!result.success) {
+      console.error(`[CourseViewer] Error saving progress:`, result.error);
+    }
+  }, [selectedFile, completedVideos, videoProgress, courseId]);
+
   // Select a file to play
   const selectFile = useCallback(
-    (file: CourseFile, sectionName: string) => {
+    async (file: CourseFile, sectionName: string) => {
+      // Save progress of current video before changing
+      await saveCurrentVideoProgress();
+      
       setSelectedFile({ file, sectionName });
       // Close sidebar on mobile when file is selected
       setIsSidebarOpen(false);
       // Reset unauthorized state when selecting a new file
       setIsUnauthorized(false);
     },
-    []
+    [saveCurrentVideoProgress]
   );
 
   // Get all files as a flat list for navigation
@@ -860,19 +890,23 @@ export default function CourseViewerPage() {
   }, [allFiles, selectedFile]);
 
   // Navigate to prev/next file
-  const goToPrevFile = useCallback(() => {
+  const goToPrevFile = useCallback(async () => {
     if (currentFileIndex > 0) {
+      // Save progress before changing video
+      await saveCurrentVideoProgress();
       const prev = allFiles[currentFileIndex - 1];
       setSelectedFile(prev);
     }
-  }, [currentFileIndex, allFiles]);
+  }, [currentFileIndex, allFiles, saveCurrentVideoProgress]);
 
-  const goToNextFile = useCallback(() => {
+  const goToNextFile = useCallback(async () => {
     if (currentFileIndex < allFiles.length - 1) {
+      // Save progress before changing video
+      await saveCurrentVideoProgress();
       const next = allFiles[currentFileIndex + 1];
       setSelectedFile(next);
     }
-  }, [currentFileIndex, allFiles]);
+  }, [currentFileIndex, allFiles, saveCurrentVideoProgress]);
 
   // Auto-navigate to first incomplete video
   useEffect(() => {
@@ -994,55 +1028,6 @@ export default function CourseViewerPage() {
     }
   }, [courseId, allFiles, handleVideoComplete]);
 
-  // Save progress on page unload
-  useEffect(() => {
-    const handleBeforeUnload = async () => {
-      if (selectedFile && currentVideoRef.current) {
-        const videoElement = document.querySelector('video') as HTMLVideoElement;
-        if (videoElement && !completedVideos.has(selectedFile.file.url)) {
-          const currentTime = videoElement.currentTime * 1000;
-          
-          // Check if progress already exists to determine method
-          const existingProgress = videoProgress.get(selectedFile.file.url);
-          const method = existingProgress ? 'PUT' : 'POST';
-          
-          // Use sendBeacon for reliable save on page unload
-          const formData = new URLSearchParams();
-          formData.append("url", selectedFile.file.url);
-          formData.append("watched_time_mills", Math.round(currentTime).toString());
-          formData.append("completed", "false");
-          
-          // Use fetch with keepalive for PUT, sendBeacon only supports POST
-          if (method === 'PUT') {
-            fetch(`${API_BASE_URL}/progress/${courseId}`, {
-              method: 'PUT',
-              headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-              },
-              body: formData.toString(),
-              credentials: 'include',
-              keepalive: true,
-            }).catch(err => console.error('Error saving progress on unload:', err));
-          } else {
-            navigator.sendBeacon(
-              `${API_BASE_URL}/progress/${courseId}`,
-              formData
-            );
-          }
-        }
-      }
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [selectedFile, courseId, completedVideos, videoProgress]);
-
-  // Update current video ref
-  useEffect(() => {
-    if (selectedFile) {
-      currentVideoRef.current = selectedFile.file.url;
-    }
-  }, [selectedFile]);
 
   if (isLoading) {
     return (
@@ -1159,6 +1144,13 @@ export default function CourseViewerPage() {
               {/* Back to Dashboard */}
               <Link
                 href="/dashboard"
+                onClick={async (e) => {
+                  e.preventDefault();
+                  // Save progress before leaving
+                  await saveCurrentVideoProgress();
+                  // Navigate to dashboard
+                  window.location.href = '/dashboard';
+                }}
                 className="w-9 h-9 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-colors duration-150"
               >
                 <svg
