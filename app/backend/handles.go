@@ -515,6 +515,14 @@ func (app *Application) GetProgress(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	pretty, err := json.MarshalIndent(progress, " ", "\t")
+
+	if err != nil {
+		app.ErrorLog.Println(err)
+		http.Error(w, "Error encoding the user to JSON", http.StatusBadRequest)
+		return
+	}
+
 	w.WriteHeader(http.StatusOK)
-	fmt.Fprintln(w, progress)
+	fmt.Fprintln(w, string(pretty))
 }
