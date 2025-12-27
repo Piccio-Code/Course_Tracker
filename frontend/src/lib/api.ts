@@ -79,6 +79,32 @@ export interface User {
 }
 
 // ============================================================================
+// INTERFACES - Matching Go structures from app/models/userProgressModel.go
+// ============================================================================
+
+/**
+ * Rappresenta il progresso di una singola risorsa/video
+ * Go struct: ResourceProgress (app/models/userProgressModel.go)
+ */
+export interface ResourceProgress {
+  id?: number;
+  time_watched?: number; // in milliseconds
+  completed?: boolean;
+  url?: string;
+}
+
+/**
+ * Rappresenta il progresso aggregato di un corso
+ * Backend response structure
+ */
+export interface Progress {
+  course_name?: string;
+  course_id?: number;
+  course_total_time?: number;  // millisecondi totali del corso
+  time_watched?: number;        // millisecondi guardati dall'utente
+}
+
+// ============================================================================
 // API Response Types
 // ============================================================================
 
@@ -440,42 +466,6 @@ export async function updateCourse(
 }
 
 /**
- * Ricarica un corso esistente dal OneDrive
- * PUT /courses/{id} (protected)
- * Non richiede il link, il backend lo recupera automaticamente dal database
- */
-export async function reloadCourse(id: number): Promise<ApiResult<{ id: number }>> {
-  try {
-    const response = await fetch(`${API_BASE_URL}/courses/${id}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: new URLSearchParams().toString(), // Empty body, backend will use stored URL
-      credentials: "include",
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      return {
-        success: false,
-        error: errorText || "Errore durante il ricaricamento del corso",
-      };
-    }
-
-    return { success: true, data: { id } };
-  } catch (err) {
-    return {
-      success: false,
-      error:
-        err instanceof Error
-          ? err.message
-          : "Errore durante il ricaricamento del corso",
-    };
-  }
-}
-
-/**
  * Elimina un corso
  * DELETE /courses/{id} (protected)
  */
@@ -502,6 +492,57 @@ export async function deleteCourse(id: number): Promise<ApiResult<void>> {
         err instanceof Error
           ? err.message
           : "Errore durante l'eliminazione del corso",
+    };
+  }
+}
+
+/**
+ * Ricarica un corso esistente (aggiorna i contenuti da OneDrive)
+ * PUT /courses/{id} (protected)
+ * Note: This uses the same endpoint as updateCourse but without changing the link
+ */
+export async function reloadCourse(id: number): Promise<ApiResult<void>> {
+  try {
+    // Get the current course data first to retrieve the original link
+    const course = await getCourse(id);
+    
+    if (!course) {
+      return {
+        success: false,
+        error: "Corso non trovato",
+      };
+    }
+
+    // Call updateCourse with the same course data to trigger a reload
+    // The backend will re-fetch the data from OneDrive
+    const response = await fetch(`${API_BASE_URL}/courses/${id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: new URLSearchParams({
+        link: "", // Empty link signals a reload operation
+        name: course.courseResources.name,
+      }).toString(),
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      return {
+        success: false,
+        error: errorText || "Errore durante il ricaricamento del corso",
+      };
+    }
+
+    return { success: true };
+  } catch (err) {
+    return {
+      success: false,
+      error:
+        err instanceof Error
+          ? err.message
+          : "Errore durante il ricaricamento del corso",
     };
   }
 }
@@ -598,4 +639,273 @@ export function countTotalParts(course: Course): number {
   }
 
   return countParts(course.parts);
+}
+
+// ============================================================================
+// PROGRESS API - /progress
+// ============================================================================
+
+/**
+ * Recupera il progresso di tutti i corsi dell'utente
+ * GET /progress (protected)
+ * Returns: Progress[] array with course progress summary
+ */
+export async function getProgress(): Promise<Progress[]> {
+  try {
+    console.log("[API] GET /progress - Fetching progress...");
+    
+    const response = await fetch(`${API_BASE_URL}/progress`, {
+      method: "GET",
+      credentials: "include",
+      headers: {
+        "Accept": "application/json",
+      },
+    });
+
+    console.log("[API] GET /progress - Response status:", response.status);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("[API] GET /progress - Error:", errorText);
+      return [];
+    }
+
+    const text = await response.text();
+    console.log("[API] GET /progress - Raw response:", text);
+    
+    // Handle empty response
+    if (!text || text.trim() === "" || text.trim() === "null") {
+      console.log("[API] GET /progress - Empty or null response, returning []");
+      return [];
+    }
+
+    const progressList: Progress[] = JSON.parse(text);
+    console.log("[API] GET /progress - Parsed progress:", progressList);
+    
+    return progressList || [];
+  } catch (err) {
+    console.error("[API] GET /progress - Exception:", err);
+    return [];
+  }
+}
+
+/**
+ * Recupera il progresso di un singolo corso
+ * GET /progress/{id} (protected)
+ */
+export async function getCourseProgress(courseId: number): Promise<ResourceProgress[]> {
+  try {
+    console.log(`[API] GET /progress/${courseId} - Fetching course progress...`);
+    
+    const response = await fetch(`${API_BASE_URL}/progress/${courseId}`, {
+      method: "GET",
+      credentials: "include",
+      headers: {
+        "Accept": "application/json",
+      },
+    });
+
+    console.log(`[API] GET /progress/${courseId} - Response status:`, response.status);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`[API] GET /progress/${courseId} - Error:`, errorText);
+      return [];
+    }
+
+    const text = await response.text();
+    console.log(`[API] GET /progress/${courseId} - Raw response:`, text);
+    
+    // Handle empty response
+    if (!text || text.trim() === "" || text.trim() === "null") {
+      console.log(`[API] GET /progress/${courseId} - Empty or null response, returning []`);
+      return [];
+    }
+
+    const progress: ResourceProgress[] = JSON.parse(text);
+    console.log(`[API] GET /progress/${courseId} - Parsed progress:`, progress);
+    
+    return progress || [];
+  } catch (err) {
+    console.error(`[API] GET /progress/${courseId} - Exception:`, err);
+    return [];
+  }
+}
+
+/**
+ * Inserisce un nuovo progresso di una risorsa/video
+ * POST /progress/{id} (protected)
+ */
+export async function insertCourseProgress(
+  courseId: number,
+  url: string,
+  watchedTimeMills: number,
+  completed: boolean
+): Promise<ApiResult<void>> {
+  try {
+    console.log(`[API] POST /progress/${courseId} - Inserting progress...`, {
+      url,
+      watchedTimeMills,
+      completed,
+    });
+
+    const formData = new URLSearchParams();
+    formData.append("url", url);
+    formData.append("watched_time_mills", watchedTimeMills.toString());
+    formData.append("completed", completed.toString());
+
+    const response = await fetch(`${API_BASE_URL}/progress/${courseId}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: formData.toString(),
+      credentials: "include",
+    });
+
+    console.log(`[API] POST /progress/${courseId} - Response status:`, response.status);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`[API] POST /progress/${courseId} - Error:`, errorText);
+      return {
+        success: false,
+        error: errorText || "Errore durante il salvataggio del progresso",
+      };
+    }
+
+    console.log(`[API] POST /progress/${courseId} - Progress saved successfully`);
+    return { success: true };
+  } catch (err) {
+    console.error(`[API] POST /progress/${courseId} - Exception:`, err);
+    return {
+      success: false,
+      error:
+        err instanceof Error
+          ? err.message
+          : "Errore durante il salvataggio del progresso",
+    };
+  }
+}
+
+/**
+ * Aggiorna il progresso esistente di una risorsa/video
+ * PUT /progress/{id} (protected)
+ */
+export async function updateCourseProgress(
+  courseId: number,
+  url: string,
+  watchedTimeMills: number,
+  completed: boolean
+): Promise<ApiResult<void>> {
+  try {
+    console.log(`[API] PUT /progress/${courseId} - Updating progress...`, {
+      url,
+      watchedTimeMills,
+      completed,
+    });
+
+    const formData = new URLSearchParams();
+    formData.append("url", url);
+    formData.append("watched_time_mills", watchedTimeMills.toString());
+    formData.append("completed", completed.toString());
+
+    const response = await fetch(`${API_BASE_URL}/progress/${courseId}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: formData.toString(),
+      credentials: "include",
+    });
+
+    console.log(`[API] PUT /progress/${courseId} - Response status:`, response.status);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`[API] PUT /progress/${courseId} - Error:`, errorText);
+      return {
+        success: false,
+        error: errorText || "Errore durante l'aggiornamento del progresso",
+      };
+    }
+
+    console.log(`[API] PUT /progress/${courseId} - Progress updated successfully`);
+    return { success: true };
+  } catch (err) {
+    console.error(`[API] PUT /progress/${courseId} - Exception:`, err);
+    return {
+      success: false,
+      error:
+        err instanceof Error
+          ? err.message
+          : "Errore durante l'aggiornamento del progresso",
+    };
+  }
+}
+
+/**
+ * Salva o aggiorna il progresso (usa POST se nuovo, PUT se esistente)
+ * Helper function che decide automaticamente quale endpoint usare
+ */
+export async function saveCourseProgress(
+  courseId: number,
+  url: string,
+  watchedTimeMills: number,
+  completed: boolean,
+  isExisting: boolean
+): Promise<ApiResult<void>> {
+  if (isExisting) {
+    return await updateCourseProgress(courseId, url, watchedTimeMills, completed);
+  } else {
+    return await insertCourseProgress(courseId, url, watchedTimeMills, completed);
+  }
+}
+
+/**
+ * Elimina il progresso di una risorsa/video
+ * DELETE /progress/{id} (protected)
+ */
+export async function deleteCourseProgress(
+  courseId: number,
+  url: string
+): Promise<ApiResult<void>> {
+  try {
+    console.log(`[API] DELETE /progress/${courseId} - Deleting progress...`, { url });
+
+    const formData = new URLSearchParams();
+    formData.append("url", url);
+
+    const response = await fetch(`${API_BASE_URL}/progress/${courseId}`, {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: formData.toString(),
+      credentials: "include",
+    });
+
+    console.log(`[API] DELETE /progress/${courseId} - Response status:`, response.status);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`[API] DELETE /progress/${courseId} - Error:`, errorText);
+      return {
+        success: false,
+        error: errorText || "Errore durante l'eliminazione del progresso",
+      };
+    }
+
+    console.log(`[API] DELETE /progress/${courseId} - Progress deleted successfully`);
+    return { success: true };
+  } catch (err) {
+    console.error(`[API] DELETE /progress/${courseId} - Exception:`, err);
+    return {
+      success: false,
+      error:
+        err instanceof Error
+          ? err.message
+          : "Errore durante l'eliminazione del progresso",
+    };
+  }
 }

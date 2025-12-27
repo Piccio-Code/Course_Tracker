@@ -4,9 +4,14 @@ import PageBackground from "@/components/PageBackground";
 import {
   getCourse,
   formatDuration,
+  getCourseProgress,
+  saveCourseProgress,
+  deleteCourseProgress,
+  API_BASE_URL,
   CourseResponse,
   CoursePart,
   CourseFile,
+  ResourceProgress,
 } from "@/lib/api";
 import { useParams } from "next/navigation";
 import { useEffect, useState, useMemo, useCallback, useRef, startTransition, memo } from "react";
@@ -162,12 +167,27 @@ interface VideoPlayerProps {
   sectionName: string;
   videoKey: number;
   onUnauthorized: () => void;
+  onVideoComplete: (url: string, watchedTime: number) => void;
+  onVideoProgress: (url: string, currentTime: number) => void;
+  onToggleComplete: (url: string, currentIsCompleted: boolean) => void;
+  initialTime?: number;
+  isCompleted?: boolean;
 }
 
-const VideoPlayer = memo(function VideoPlayer({ file, sectionName, videoKey, onUnauthorized }: VideoPlayerProps) {
+const VideoPlayer = memo(function VideoPlayer({ file, sectionName, videoKey, onUnauthorized, onVideoComplete, onVideoProgress, onToggleComplete, initialTime = 0, isCompleted = false }: VideoPlayerProps) {
   const isVideo = ["mp4", "mkv", "avi", "webm", "mov"].includes(
     file.format.toLowerCase()
   );
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const lastSavedTimeRef = useRef<number>(0);
+  const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Set initial time when video is loaded
+  useEffect(() => {
+    if (videoRef.current && initialTime > 0) {
+      videoRef.current.currentTime = initialTime / 1000; // Convert ms to seconds
+    }
+  }, [initialTime, videoKey]);
 
   const handleVideoError = (e: React.SyntheticEvent<HTMLVideoElement>) => {
     const video = e.currentTarget;
@@ -179,6 +199,38 @@ const VideoPlayer = memo(function VideoPlayer({ file, sectionName, videoKey, onU
     }
   };
 
+  // Handle video time update (for progress tracking)
+  const handleTimeUpdate = useCallback((e: React.SyntheticEvent<HTMLVideoElement>) => {
+    const video = e.currentTarget;
+    const currentTime = video.currentTime * 1000; // Convert to milliseconds
+    
+    // Save progress every 10 seconds
+    if (currentTime - lastSavedTimeRef.current > 10000) {
+      lastSavedTimeRef.current = currentTime;
+      onVideoProgress(file.url, currentTime);
+    }
+    
+    // DON'T mark as completed here - let the video finish and trigger onEnded event
+  }, [file.url, onVideoProgress]);
+
+  // Handle video ended
+  const handleVideoEnded = useCallback(() => {
+    const video = videoRef.current;
+    if (video) {
+      const duration = video.duration * 1000; // Convert to milliseconds
+      onVideoComplete(file.url, duration);
+    }
+  }, [file.url, onVideoComplete]);
+
+  // Cleanup interval on unmount
+  useEffect(() => {
+    return () => {
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+      }
+    };
+  }, []);
+
   return (
     <div className="flex flex-col py-4 sm:py-6">
       {/* Video Player - SOPRA */}
@@ -187,6 +239,7 @@ const VideoPlayer = memo(function VideoPlayer({ file, sectionName, videoKey, onU
           <div className="w-full">
             <div className="relative rounded-xl sm:rounded-2xl overflow-hidden bg-black border border-white/10 shadow-2xl shadow-violet-500/10">
               <video
+                ref={videoRef}
                 key={videoKey}
                 controls
                 controlsList="nodownload"
@@ -194,6 +247,8 @@ const VideoPlayer = memo(function VideoPlayer({ file, sectionName, videoKey, onU
                 src={file.url}
                 preload="metadata"
                 onError={handleVideoError}
+                onTimeUpdate={handleTimeUpdate}
+                onEnded={handleVideoEnded}
               >
                 <source src={file.url} type={`video/${file.format.toLowerCase()}`} />
                 Il tuo browser non supporta la riproduzione video.
@@ -270,9 +325,57 @@ const VideoPlayer = memo(function VideoPlayer({ file, sectionName, videoKey, onU
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-xs sm:text-sm text-white/50 mb-1">{sectionName}</p>
-            <h2 className="text-lg sm:text-xl font-bold text-white mb-2 leading-tight">
-              {file.name}
-            </h2>
+            <div className="flex items-center gap-2 sm:gap-3 mb-2">
+              <h2 className="text-lg sm:text-xl font-bold text-white leading-tight flex-1 min-w-0 truncate">
+                {file.name}
+              </h2>
+              {/* Pulsante Toggle Completamento */}
+              <button
+                onClick={() => onToggleComplete(file.url, isCompleted)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 flex-shrink-0 ${
+                  isCompleted
+                    ? "bg-green-500/20 text-green-400 hover:bg-red-500/20 hover:text-red-400 active:scale-95"
+                    : "bg-violet-500/20 text-violet-300 hover:bg-violet-500/30 hover:text-white active:scale-95"
+                }`}
+                title={isCompleted ? "Clicca per rimuovere completamento" : "Marca come già visto"}
+              >
+                {isCompleted ? (
+                  <>
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                    <span className="hidden sm:inline">Completato</span>
+                  </>
+                ) : (
+                  <>
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M5 13l4 4L19 7"
+                      />
+                    </svg>
+                    <span className="hidden sm:inline">Già Visto</span>
+                  </>
+                )}
+              </button>
+            </div>
             <div className="flex flex-wrap items-center gap-2 sm:gap-4">
               <span className="flex items-center gap-1.5 text-xs sm:text-sm text-violet-400">
                 <svg
@@ -371,6 +474,7 @@ interface SectionItemProps {
   selectedFileUrl: string | null;
   onFileSelect: (file: CourseFile, sectionName: string) => void;
   debouncedSearchQuery: string;
+  videoProgress: Map<string, ResourceProgress>;
 }
 
 const SectionItem = memo(function SectionItem({
@@ -381,6 +485,7 @@ const SectionItem = memo(function SectionItem({
   selectedFileUrl,
   onFileSelect,
   debouncedSearchQuery,
+  videoProgress,
 }: SectionItemProps) {
   // Filter files by search query - using debounced value
   const filteredFiles = useMemo(() => {
@@ -438,6 +543,9 @@ const SectionItem = memo(function SectionItem({
               const isVideo = ["mp4", "mkv", "avi", "webm", "mov"].includes(
                 file.format.toLowerCase()
               );
+              const progress = videoProgress.get(file.url);
+              const isCompleted = progress?.completed || false;
+              const hasProgress = progress && progress.time_watched && progress.time_watched > 0 && !isCompleted;
 
               return (
                 <button
@@ -449,8 +557,38 @@ const SectionItem = memo(function SectionItem({
                       : "hover:bg-white/5 border-l-2 border-transparent"
                   }`}
                 >
-                  {/* Video/File Icon */}
-                  {isVideo ? (
+                  {/* Completion/Progress Icon */}
+                  {isCompleted ? (
+                    // Video completato - icona verde
+                    <svg
+                      className="w-4 h-4 flex-shrink-0 text-green-400"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                  ) : hasProgress ? (
+                    // Video parzialmente guardato - icona giallo/arancione
+                    <svg
+                      className="w-4 h-4 flex-shrink-0 text-amber-400"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                  ) : isVideo ? (
                     <svg
                       className={`w-4 h-4 flex-shrink-0 ${
                         isSelected ? "text-violet-400" : "text-white/40"
@@ -492,7 +630,13 @@ const SectionItem = memo(function SectionItem({
 
                   <span
                     className={`flex-1 truncate text-sm ${
-                      isSelected ? "text-white font-medium" : "text-white/70"
+                      isCompleted 
+                        ? "text-green-400/80 line-through" 
+                        : hasProgress
+                        ? "text-amber-400/90"
+                        : isSelected 
+                        ? "text-white font-medium" 
+                        : "text-white/70"
                     }`}
                   >
                     {file.name}
@@ -500,13 +644,26 @@ const SectionItem = memo(function SectionItem({
 
                   <div className="flex items-center gap-2 flex-shrink-0">
                     {file.duration > 0 && (
-                      <span className="text-xs text-white/40">
+                      <span className={`text-xs ${
+                        isCompleted ? "text-green-400/60" :
+                        hasProgress ? "text-amber-400/60" :
+                        "text-white/40"
+                      }`}>
                         {formatDuration(file.duration)}
+                      </span>
+                    )}
+                    {hasProgress && !isCompleted && progress && (
+                      <span className="text-xs px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 font-medium">
+                        {Math.round((progress.time_watched! / file.duration) * 100)}%
                       </span>
                     )}
                     <span
                       className={`text-xs px-1.5 py-0.5 rounded ${
-                        isSelected
+                        isCompleted
+                          ? "bg-green-500/20 text-green-400"
+                          : hasProgress
+                          ? "bg-amber-500/20 text-amber-400"
+                          : isSelected
                           ? "bg-violet-500/30 text-violet-300"
                           : "bg-white/10 text-white/50"
                       } uppercase`}
@@ -562,9 +719,13 @@ export default function CourseViewerPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isUnauthorized, setIsUnauthorized] = useState(false);
   const [videoKey, setVideoKey] = useState(0);
+  const [videoProgress, setVideoProgress] = useState<Map<string, ResourceProgress>>(new Map());
+  const [completedVideos, setCompletedVideos] = useState<Set<string>>(new Set());
+  const currentVideoRef = useRef<string | null>(null);
+  const hasNavigatedToFirstIncomplete = useRef(false);
 
   useEffect(() => {
-    async function fetchCourse() {
+    async function fetchCourseAndProgress() {
       if (!courseId || isNaN(courseId)) {
         setError("ID corso non valido");
         setIsLoading(false);
@@ -573,12 +734,38 @@ export default function CourseViewerPage() {
 
       try {
         console.log(`[CourseViewer] Fetching course ${courseId}...`);
-        const data = await getCourse(courseId);
+        
+        // Fetch course and progress in parallel
+        const [courseData, progressData] = await Promise.all([
+          getCourse(courseId),
+          getCourseProgress(courseId),
+        ]);
 
-        if (!data) {
+        if (!courseData) {
           setError("Corso non trovato");
         } else {
-          setCourse(data);
+          setCourse(courseData);
+          
+          // Build progress map
+          const progressMap = new Map<string, ResourceProgress>();
+          const completed = new Set<string>();
+          
+          progressData.forEach(p => {
+            if (p.url) {
+              progressMap.set(p.url, p);
+              if (p.completed) {
+                completed.add(p.url);
+              }
+            }
+          });
+          
+          setVideoProgress(progressMap);
+          setCompletedVideos(completed);
+          
+          console.log(`[CourseViewer] Progress loaded:`, {
+            totalProgress: progressData.length,
+            completedCount: completed.size,
+          });
         }
       } catch (err) {
         console.error("[CourseViewer] Error:", err);
@@ -588,7 +775,7 @@ export default function CourseViewerPage() {
       }
     }
 
-    fetchCourse();
+    fetchCourseAndProgress();
   }, [courseId]);
 
   // Flatten parts for navigation
@@ -687,10 +874,175 @@ export default function CourseViewerPage() {
     }
   }, [currentFileIndex, allFiles]);
 
+  // Auto-navigate to first incomplete video
+  useEffect(() => {
+    if (course && allFiles.length > 0 && !hasNavigatedToFirstIncomplete.current && !selectedFile) {
+      // Find first incomplete video
+      const firstIncomplete = allFiles.find(({ file }) => !completedVideos.has(file.url));
+      
+      if (firstIncomplete) {
+        console.log(`[CourseViewer] Auto-navigating to first incomplete video:`, firstIncomplete.file.name);
+        setSelectedFile(firstIncomplete);
+        
+        // Expand the section containing this video
+        const sectionToExpand = sections.find(s => s.name === firstIncomplete.sectionName);
+        if (sectionToExpand) {
+          setExpandedSections(prev => new Set([...(prev || []), sectionToExpand.id]));
+        }
+      } else if (allFiles.length > 0) {
+        // All videos completed, go to first video
+        console.log(`[CourseViewer] All videos completed, going to first video`);
+        setSelectedFile(allFiles[0]);
+      }
+      
+      hasNavigatedToFirstIncomplete.current = true;
+    }
+  }, [course, allFiles, completedVideos, sections, selectedFile]);
+
   // Memoized callback for video unauthorized state
   const handleUnauthorized = useCallback(() => {
     setIsUnauthorized(true);
   }, []);
+
+  // Handle video completion
+  const handleVideoComplete = useCallback(async (url: string, watchedTime: number) => {
+    if (completedVideos.has(url)) return; // Already marked as completed
+    
+    console.log(`[CourseViewer] Video completed:`, url);
+    
+    // Check if progress already exists
+    const existingProgress = videoProgress.get(url);
+    const isExisting = existingProgress !== undefined;
+    
+    // Update local state
+    setCompletedVideos(prev => new Set([...prev, url]));
+    setVideoProgress(prev => new Map(prev).set(url, { 
+      ...prev.get(url),
+      completed: true, 
+      time_watched: watchedTime,
+      url 
+    }));
+    
+    // Save to backend (POST if new, PUT if existing)
+    const result = await saveCourseProgress(courseId, url, Math.round(watchedTime), true, isExisting);
+    if (!result.success) {
+      console.error(`[CourseViewer] Error saving completion:`, result.error);
+    }
+    
+    // DON'T auto-skip to next video - let the video finish naturally
+    // The user can manually go to next video if they want
+  }, [courseId, completedVideos, videoProgress]);
+
+  // Handle video progress update
+  const handleVideoProgress = useCallback(async (url: string, currentTime: number) => {
+    if (completedVideos.has(url)) return; // Don't update if already completed
+    
+    console.log(`[CourseViewer] Saving progress:`, url, currentTime);
+    
+    // Check if progress already exists
+    const existingProgress = videoProgress.get(url);
+    const isExisting = existingProgress !== undefined;
+    
+    // Update local state
+    setVideoProgress(prev => new Map(prev).set(url, { 
+      ...prev.get(url),
+      time_watched: currentTime,
+      url 
+    }));
+    
+    // Save to backend (POST if new, PUT if existing) - don't await to avoid blocking
+    saveCourseProgress(courseId, url, Math.round(currentTime), false, isExisting).catch(err => {
+      console.error(`[CourseViewer] Error saving progress:`, err);
+    });
+  }, [courseId, completedVideos, videoProgress]);
+
+  // Handle toggle complete (mark as complete or remove completion)
+  const handleToggleComplete = useCallback(async (url: string, currentIsCompleted: boolean) => {
+    if (currentIsCompleted) {
+      // Video è completato → rimuovi il progresso (DELETE)
+      console.log(`[CourseViewer] Removing completion for:`, url);
+      
+      // Update local state first (ottimistic update)
+      setCompletedVideos(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(url);
+        return newSet;
+      });
+      setVideoProgress(prev => {
+        const newMap = new Map(prev);
+        newMap.delete(url);
+        return newMap;
+      });
+      
+      // Call DELETE endpoint
+      const result = await deleteCourseProgress(courseId, url);
+      if (!result.success) {
+        console.error(`[CourseViewer] Error deleting progress:`, result.error);
+        // Rollback on error
+        setCompletedVideos(prev => new Set([...prev, url]));
+        alert("Errore durante la rimozione del completamento");
+      }
+    } else {
+      // Video NON è completato → marca come completato
+      console.log(`[CourseViewer] Marking as complete:`, url);
+      
+      // Find the file to get duration
+      const fileData = allFiles.find(f => f.file.url === url);
+      if (fileData) {
+        await handleVideoComplete(url, fileData.file.duration);
+      }
+    }
+  }, [courseId, allFiles, handleVideoComplete]);
+
+  // Save progress on page unload
+  useEffect(() => {
+    const handleBeforeUnload = async () => {
+      if (selectedFile && currentVideoRef.current) {
+        const videoElement = document.querySelector('video') as HTMLVideoElement;
+        if (videoElement && !completedVideos.has(selectedFile.file.url)) {
+          const currentTime = videoElement.currentTime * 1000;
+          
+          // Check if progress already exists to determine method
+          const existingProgress = videoProgress.get(selectedFile.file.url);
+          const method = existingProgress ? 'PUT' : 'POST';
+          
+          // Use sendBeacon for reliable save on page unload
+          const formData = new URLSearchParams();
+          formData.append("url", selectedFile.file.url);
+          formData.append("watched_time_mills", Math.round(currentTime).toString());
+          formData.append("completed", "false");
+          
+          // Use fetch with keepalive for PUT, sendBeacon only supports POST
+          if (method === 'PUT') {
+            fetch(`${API_BASE_URL}/progress/${courseId}`, {
+              method: 'PUT',
+              headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+              },
+              body: formData.toString(),
+              credentials: 'include',
+              keepalive: true,
+            }).catch(err => console.error('Error saving progress on unload:', err));
+          } else {
+            navigator.sendBeacon(
+              `${API_BASE_URL}/progress/${courseId}`,
+              formData
+            );
+          }
+        }
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [selectedFile, courseId, completedVideos, videoProgress]);
+
+  // Update current video ref
+  useEffect(() => {
+    if (selectedFile) {
+      currentVideoRef.current = selectedFile.file.url;
+    }
+  }, [selectedFile]);
 
   if (isLoading) {
     return (
@@ -967,14 +1319,34 @@ export default function CourseViewerPage() {
             <div className="flex-shrink-0 px-4 py-4 border-b border-white/10">
               <div className="flex items-center justify-between mb-1">
                 <span className="text-white/60 text-sm">Your Progress</span>
-                <span className="text-white font-medium">0/{totalFiles}</span>
+                <span className="text-white font-medium">{completedVideos.size}/{totalFiles}</span>
               </div>
               <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
                 <div
                   className="h-full bg-gradient-to-r from-violet-500 to-fuchsia-500 rounded-full transition-[width] duration-300"
-                  style={{ width: "0%" }}
+                  style={{ width: `${totalFiles > 0 ? (completedVideos.size / totalFiles) * 100 : 0}%` }}
                 />
               </div>
+              {completedVideos.size === totalFiles && totalFiles > 0 && (
+                <div className="flex items-center gap-1.5 mt-2">
+                  <svg
+                    className="w-4 h-4 text-green-400"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  <span className="text-xs text-green-400 font-medium">
+                    Corso completato!
+                  </span>
+                </div>
+              )}
             </div>
 
             {/* Search Bar */}
@@ -1015,6 +1387,7 @@ export default function CourseViewerPage() {
                   selectedFileUrl={selectedFile?.file.url || null}
                   onFileSelect={selectFile}
                   debouncedSearchQuery={debouncedSearchQuery}
+                  videoProgress={videoProgress}
                 />
               ))}
             </div>
@@ -1029,6 +1402,11 @@ export default function CourseViewerPage() {
                   sectionName={selectedFile.sectionName}
                   videoKey={videoKey}
                   onUnauthorized={handleUnauthorized}
+                  onVideoComplete={handleVideoComplete}
+                  onVideoProgress={handleVideoProgress}
+                  onToggleComplete={handleToggleComplete}
+                  initialTime={videoProgress.get(selectedFile.file.url)?.time_watched || 0}
+                  isCompleted={completedVideos.has(selectedFile.file.url)}
                 />
               ) : (
                 <EmptyVideoState />

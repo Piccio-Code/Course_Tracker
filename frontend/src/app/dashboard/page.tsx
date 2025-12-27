@@ -11,8 +11,10 @@ import {
   formatDuration,
   formatDate,
   timeAgo,
+  getProgress,
   User,
   CoursesListResponse,
+  Progress,
 } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useCallback, memo } from "react";
@@ -33,10 +35,28 @@ interface CourseCardProps {
   onClick: () => void;
   onDelete: (e: React.MouseEvent) => void;
   onReload: (e: React.MouseEvent) => void;
+  progressData?: Progress;
 }
 
-const CourseCard = memo(function CourseCard({ course, index, onClick, onDelete, onReload }: CourseCardProps) {
+const CourseCard = memo(function CourseCard({ course, index, onClick, onDelete, onReload, progressData }: CourseCardProps) {
   const colorSet = courseColors[index % courseColors.length];
+
+  // Calculate progress percentage: time_watched / course_total_time * 100
+  const timeWatched = progressData?.time_watched || 0;
+  const totalTime = progressData?.course_total_time || 0;
+  
+  const progressPercentage = (progressData && totalTime > 0)
+    ? Math.min(Math.round((timeWatched / totalTime) * 100), 100)
+    : 0;
+
+  // Debug per vedere i calcoli
+  if (progressData) {
+    console.log(`[CourseCard] ${course.name}:`, {
+      time_watched: timeWatched,
+      course_total_time: totalTime,
+      percentage: progressPercentage
+    });
+  }
 
   return (
     <div
@@ -103,9 +123,45 @@ const CourseCard = memo(function CourseCard({ course, index, onClick, onDelete, 
 
         <div className="p-6">
           {/* Course name */}
-          <h3 className="text-xl font-bold text-white mb-4 truncate">
+          <h3 className="text-xl font-bold text-white mb-3 truncate">
             {course.name}
           </h3>
+
+          {/* Progress bar - ALWAYS VISIBLE */}
+          <div className="mb-4">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-xs text-white/50">Progresso</span>
+              <span className="text-xs font-semibold text-white">
+                {progressPercentage}%
+              </span>
+            </div>
+            <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+              <div
+                className={`h-full bg-gradient-to-r ${colorSet.from} ${colorSet.to} rounded-full transition-[width] duration-500`}
+                style={{ width: `${progressPercentage}%` }}
+              />
+            </div>
+            {progressPercentage >= 100 && (
+              <div className="flex items-center gap-1 mt-2">
+                <svg
+                  className="w-4 h-4 text-green-400"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+                <span className="text-xs text-green-400 font-medium">
+                  Completato!
+                </span>
+              </div>
+            )}
+          </div>
 
           {/* Stats grid */}
           <div className="grid grid-cols-2 gap-4">
@@ -612,6 +668,23 @@ export default function Dashboard() {
   const [isReloadModalOpen, setIsReloadModalOpen] = useState(false);
   const [courseToReload, setCourseToReload] = useState<CoursesListResponse | null>(null);
   const [isReloading, setIsReloading] = useState(false);
+  const [progressList, setProgressList] = useState<Progress[]>([]);
+
+  // Funzione per caricare il progresso
+  const fetchProgress = useCallback(async () => {
+    try {
+      console.log("[Dashboard] Fetching progress...");
+      const progress = await getProgress();
+      console.log("[Dashboard] Progress received:", progress);
+      console.log("[Dashboard] Progress array length:", progress.length);
+      if (progress.length > 0) {
+        console.log("[Dashboard] First progress item:", progress[0]);
+      }
+      setProgressList(progress);
+    } catch (err) {
+      console.error("[Dashboard] Error fetching progress:", err);
+    }
+  }, []);
 
   // Funzione per caricare i corsi
   const fetchCourses = useCallback(async () => {
@@ -646,14 +719,14 @@ export default function Dashboard() {
       console.log("[Dashboard] User authenticated:", currentUser);
       setUser(currentUser);
 
-      // Fetch courses
-      await fetchCourses();
+      // Fetch courses and progress in parallel
+      await Promise.all([fetchCourses(), fetchProgress()]);
 
       setIsLoading(false);
     }
 
     checkAuth();
-  }, [router, fetchCourses]);
+  }, [router, fetchCourses, fetchProgress]);
 
   const handleLogout = async () => {
     console.log("[Dashboard] Logging out...");
@@ -662,8 +735,8 @@ export default function Dashboard() {
   };
 
   const handleRefresh = async () => {
-    console.log("[Dashboard] Refreshing courses...");
-    await fetchCourses();
+    console.log("[Dashboard] Refreshing courses and progress...");
+    await Promise.all([fetchCourses(), fetchProgress()]);
   };
 
   const handleOpenModal = () => {
@@ -676,7 +749,7 @@ export default function Dashboard() {
 
   const handleCourseCreated = () => {
     console.log("[Dashboard] Course created, refreshing list...");
-    fetchCourses();
+    Promise.all([fetchCourses(), fetchProgress()]);
   };
 
   // Memoized navigation handler for courses
@@ -738,8 +811,8 @@ export default function Dashboard() {
 
     if (result.success) {
       console.log("[Dashboard] Course reloaded successfully");
-      // Refresh courses list to get updated data
-      await fetchCourses();
+      // Refresh courses list and progress to get updated data
+      await Promise.all([fetchCourses(), fetchProgress()]);
       setIsReloadModalOpen(false);
       setCourseToReload(null);
     } else {
@@ -936,16 +1009,22 @@ export default function Dashboard() {
               {error ? (
                 <ErrorState onRetry={handleRefresh} />
               ) : courses.length > 0 ? (
-                courses.map((course, index) => (
-                  <CourseCard
-                    key={course.id}
-                    course={course}
-                    index={index}
-                    onClick={() => handleCourseClick(course.id)}
-                    onDelete={(e) => handleDeleteClick(e, course)}
-                    onReload={(e) => handleReloadClick(e, course)}
-                  />
-                ))
+                courses.map((course, index) => {
+                  // Find progress for this course by course_id
+                  const progressData = progressList.find(p => p.course_id === course.id);
+                  
+                  return (
+                    <CourseCard
+                      key={course.id}
+                      course={course}
+                      index={index}
+                      onClick={() => handleCourseClick(course.id)}
+                      onDelete={(e) => handleDeleteClick(e, course)}
+                      onReload={(e) => handleReloadClick(e, course)}
+                      progressData={progressData}
+                    />
+                  );
+                })
               ) : isLoadingCourses ? (
                 // Loading skeleton
                 <>
