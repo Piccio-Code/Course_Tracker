@@ -3,6 +3,7 @@ package models
 import (
 	"context"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"strings"
 )
 
 type ProgressModel struct {
@@ -154,6 +155,8 @@ func (p *ProgressModel) GetProgresses(ctx context.Context, userId int) (userProg
 		if err != nil {
 			return nil, err
 		}
+
+		progress.CourseName = strings.Replace(progress.CourseName, "\"", "", -1)
 
 		userProgress = append(userProgress, progress)
 	}
