@@ -714,6 +714,7 @@ export default function CourseViewerPage() {
   const [videoProgress, setVideoProgress] = useState<Map<string, ResourceProgress>>(new Map());
   const [completedVideos, setCompletedVideos] = useState<Set<string>>(new Set());
   const hasNavigatedToFirstIncomplete = useRef(false);
+  const [authCountdown, setAuthCountdown] = useState<number | null>(null);
 
   useEffect(() => {
     async function fetchCourseAndProgress() {
@@ -936,7 +937,46 @@ export default function CourseViewerPage() {
   // Memoized callback for video unauthorized state
   const handleUnauthorized = useCallback(() => {
     setIsUnauthorized(true);
+    setAuthCountdown(8); // Start 8 second countdown to force reading
   }, []);
+
+  // Countdown timer effect
+  useEffect(() => {
+    if (authCountdown !== null && authCountdown > 0) {
+      const timer = setTimeout(() => {
+        setAuthCountdown(authCountdown - 1);
+      }, 1000);
+      return () => clearTimeout(timer);
+    } else if (authCountdown === 0) {
+      setAuthCountdown(null);
+    }
+  }, [authCountdown]);
+
+  // Block sidebar scroll when unauthorized overlay is shown
+  useEffect(() => {
+    // Find the scrollable sections list inside the sidebar
+    const sidebar = document.querySelector('aside');
+    const sectionsList = sidebar?.querySelector('.overflow-y-auto');
+    
+    if (sectionsList) {
+      if (isUnauthorized) {
+        // Block scrolling
+        sectionsList.classList.remove('overflow-y-auto');
+        sectionsList.classList.add('overflow-hidden');
+      } else {
+        // Restore scrolling
+        sectionsList.classList.remove('overflow-hidden');
+        sectionsList.classList.add('overflow-y-auto');
+      }
+    }
+
+    return () => {
+      if (sectionsList) {
+        sectionsList.classList.remove('overflow-hidden');
+        sectionsList.classList.add('overflow-y-auto');
+      }
+    };
+  }, [isUnauthorized]);
 
   // Handle video completion
   const handleVideoComplete = useCallback(async (url: string, watchedTime: number) => {
@@ -1405,20 +1445,20 @@ export default function CourseViewerPage() {
               )}
             </div>
 
-            {/* Authorization Overlay - Covers entire content area */}
+            {/* Authorization Overlay - Covers only video area */}
             {isUnauthorized && (
-              <div className="fixed md:absolute inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
-                {/* Backdrop - reduced blur for performance */}
+              <div className="absolute inset-0 z-50 flex items-center justify-center p-4">
+                {/* Backdrop */}
                 <div className="absolute inset-0 bg-black/90 backdrop-blur-sm" />
                 
                 {/* Content */}
                 <div className="relative z-10 w-full max-w-lg">
-                  <div className="bg-gradient-to-br from-black/95 to-black/90 border border-yellow-500/40 rounded-2xl p-6 sm:p-10 shadow-2xl shadow-yellow-500/30">
+                  <div className="bg-gradient-to-br from-black/95 to-black/90 border border-yellow-500/40 rounded-xl p-6 shadow-2xl shadow-yellow-500/30">
                     <div className="text-center">
                       {/* Icon */}
-                      <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-br from-yellow-500/20 to-orange-500/20 flex items-center justify-center mx-auto mb-6 shadow-lg shadow-yellow-500/20">
+                      <div className="w-16 h-16 rounded-full bg-gradient-to-br from-yellow-500/20 to-orange-500/20 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-yellow-500/20">
                         <svg
-                          className="w-10 h-10 sm:w-12 sm:h-12 text-yellow-400"
+                          className="w-8 h-8 text-yellow-400"
                           fill="none"
                           viewBox="0 0 24 24"
                           stroke="currentColor"
@@ -1433,19 +1473,48 @@ export default function CourseViewerPage() {
                       </div>
 
                       {/* Title */}
-                      <h3 className="text-2xl sm:text-3xl font-bold text-white mb-4">
+                      <h3 className="text-xl sm:text-2xl font-bold text-white mb-3">
                         Autorizzazione Richiesta
                       </h3>
 
                       {/* Description */}
-                      <p className="text-white/70 mb-8 text-base sm:text-lg leading-relaxed">
-                        Per accedere ai video, devi prima autenticarti sulla cartella del corso.<br />
-                        Clicca sul bottone qui sotto, accedi alla cartella su OneDrive/SharePoint,<br />
-                        poi <strong className="text-white">torna su questa pagina</strong> e riprova a caricare il video.
-                      </p>
+                      <div className="mb-4">
+                        <p className="text-white/70 text-sm leading-relaxed">
+                          Per accedere ai video, devi prima autenticarti sulla cartella del corso.
+                          Clicca sul bottone, accedi alla cartella su OneDrive/SharePoint,
+                          poi <strong className="text-yellow-300">chiudi la scheda</strong> e il video si ricaricherà automaticamente.
+                        </p>
+                      </div>
+
+                      {/* Warning Box - Read Instructions */}
+                      {authCountdown !== null && authCountdown > 0 && (
+                        <div className="mb-4 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/30 flex items-start gap-2 animate-pulse">
+                          <svg
+                            className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                            />
+                          </svg>
+                          <div className="flex-1">
+                            <p className="text-yellow-200 font-semibold text-xs sm:text-sm">
+                              ⏱️ Leggi attentamente le istruzioni sopra
+                            </p>
+                            <p className="text-yellow-300/80 text-xs mt-0.5">
+                              Potrai procedere tra {authCountdown} second{authCountdown !== 1 ? 'i' : 'o'}...
+                            </p>
+                          </div>
+                        </div>
+                      )}
 
                       {/* Buttons */}
-                      <div className="flex flex-col gap-3 sm:gap-4">
+                      <div className="flex flex-col gap-3">
                         <button
                           onClick={(e) => {
                             e.preventDefault();
@@ -1459,31 +1528,77 @@ export default function CourseViewerPage() {
                               alert('Per favore, consenti i popup per questo sito e riprova.');
                               return;
                             }
+                            
+                            // Monitor when user closes the auth window
+                            const checkInterval = setInterval(() => {
+                              if (authWindow.closed) {
+                                clearInterval(checkInterval);
+                                // Auto-reload video when user closes the auth window
+                                console.log('[Auth] Window closed, reloading video...');
+                                setTimeout(() => {
+                                  setIsUnauthorized(false);
+                                  setAuthCountdown(null);
+                                  setVideoKey(prev => prev + 1);
+                                }, 500);
+                              }
+                            }, 500);
+                            
+                            // Cleanup after 15 minutes
+                            setTimeout(() => {
+                              clearInterval(checkInterval);
+                            }, 15 * 60 * 1000);
                           }}
-                          className="inline-flex items-center justify-center gap-3 px-8 py-4 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold text-base hover:shadow-xl hover:shadow-blue-500/30 hover:scale-105 transition-[transform,shadow] duration-200 will-change-transform"
+                          disabled={authCountdown !== null && authCountdown > 0}
+                          className={`inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-white font-semibold text-sm sm:text-base transition-all duration-200 ${
+                            authCountdown !== null && authCountdown > 0
+                              ? 'bg-gray-600 cursor-not-allowed opacity-50'
+                              : 'bg-gradient-to-r from-blue-500 to-blue-600 hover:shadow-lg hover:shadow-blue-500/30 hover:scale-105 active:scale-100'
+                          }`}
                         >
-                          <svg
-                            className="w-6 h-6"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
-                            />
-                          </svg>
-                          Accedi alla Cartella del Corso
+                          {authCountdown !== null && authCountdown > 0 ? (
+                            <>
+                              <svg
+                                className="w-5 h-5 animate-spin"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                                />
+                              </svg>
+                              Attendi {authCountdown}s
+                            </>
+                          ) : (
+                            <>
+                              <svg
+                                className="w-5 h-5"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
+                                />
+                              </svg>
+                              Accedi alla Cartella del Corso
+                            </>
+                          )}
                         </button>
                         
                         <button
                           onClick={() => {
                             setIsUnauthorized(false);
+                            setAuthCountdown(null);
                             setVideoKey(prev => prev + 1);
                           }}
-                          className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-white/5 border border-white/20 text-white/80 text-sm font-medium hover:bg-white/10 hover:border-white/30 hover:text-white transition-colors duration-150"
+                          className="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-white/5 border border-white/20 text-white/80 text-sm font-medium hover:bg-white/10 hover:border-white/30 hover:text-white transition-all duration-150"
                         >
                           <svg
                             className="w-5 h-5"
