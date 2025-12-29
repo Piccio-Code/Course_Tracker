@@ -119,14 +119,38 @@ export default function Login() {
                 />
               </div>
               
+              {/* 
+                ⚠️ GDPR: "Ricordami" rimosso temporaneamente
+                Motivo: Usa cookie persistenti che richiedono consenso preventivo
+                TODO: Re-implementare dopo aver impostato il cookie consent
+              */}
               <div className="flex items-center justify-between text-sm">
-                <label className="flex items-center gap-2 text-white/70 cursor-pointer">
-                  <input type="checkbox" className="rounded bg-white/10 border-white/20 text-violet-500 focus:ring-violet-500/50" />
-                  Ricordami
-                </label>
+                <div className="text-white/50 text-xs">
+                  {/* <label className="flex items-center gap-2 text-white/70 cursor-pointer">
+                    <input type="checkbox" className="rounded bg-white/10 border-white/20 text-violet-500 focus:ring-violet-500/50" />
+                    Ricordami
+                  </label> */}
+                </div>
                 <Link href="/forgot-password" className="text-violet-400 hover:text-violet-300 transition-colors">
                   Password dimenticata?
                 </Link>
+              </div>
+              
+              {/* ✅ GDPR: Informativa breve sotto il form */}
+              <div className="mt-2 p-3 rounded-lg bg-white/5 border border-white/10">
+                <p className="text-xs text-white/60 leading-relaxed">
+                  <strong className="text-white/80">🔒 Privacy:</strong> Accedendo, 
+                  i tuoi dati di autenticazione saranno elaborati da{" "}
+                  <strong className="text-white/80">[Inserisci Nome/Azienda]</strong>.{" "}
+                  <Link 
+                    href="/privacy" 
+                    className="text-violet-400 hover:text-violet-300 underline"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Informativa Privacy
+                  </Link>
+                </p>
               </div>
               
               <button

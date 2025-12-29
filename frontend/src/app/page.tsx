@@ -1,6 +1,7 @@
 "use client";
 
 import PageBackground from "@/components/PageBackground";
+import Footer from "@/components/Footer";
 import Link from "next/link";
 
 export default function Home() {
@@ -74,6 +75,9 @@ export default function Home() {
           </div>
         </div>
       </main>
+      
+      {/* Footer legale - GDPR Compliance */}
+      <Footer />
     </div>
   );
 }

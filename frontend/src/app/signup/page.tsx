@@ -14,19 +14,37 @@ export default function Signup() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  
+  // ✅ GDPR: Consensi separati (Art. 7 GDPR - consenso specifico per ogni finalità)
   const [acceptTerms, setAcceptTerms] = useState(false);
+  const [acceptPrivacy, setAcceptPrivacy] = useState(false);
+  
   const [error, setError] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
+    // Validazione password
     if (password !== confirmPassword) {
       setError("Le password non coincidono");
       return;
     }
+    
+    // Validazione lunghezza password (Data minimization + security)
+    if (password.length < 8) {
+      setError("La password deve contenere almeno 8 caratteri");
+      return;
+    }
+    
+    // ✅ GDPR: Verifica consensi separati (Art. 7 GDPR)
     if (!acceptTerms) {
-      setError("Devi accettare i termini e condizioni");
+      setError("Devi accettare i Termini di Servizio per proseguire");
+      return;
+    }
+    
+    if (!acceptPrivacy) {
+      setError("Devi accettare l'Informativa Privacy per proseguire");
       return;
     }
 
@@ -148,25 +166,69 @@ export default function Signup() {
                 />
               </div>
               
-              <div className="pt-2">
-                <label className="flex items-start gap-3 text-sm text-white/70 cursor-pointer">
+              {/* 
+                ✅ GDPR COMPLIANCE: Consensi separati
+                Art. 7 GDPR: Il consenso deve essere specifico per ogni finalità
+                Le checkbox NON devono essere pre-selezionate
+              */}
+              <div className="pt-2 space-y-3">
+                {/* Checkbox 1: Termini di Servizio */}
+                <label className="flex items-start gap-3 text-sm text-white/70 cursor-pointer group">
                   <input 
                     type="checkbox" 
                     checked={acceptTerms}
                     onChange={(e) => setAcceptTerms(e.target.checked)}
-                    className="mt-0.5 rounded bg-white/10 border-white/20 text-violet-500 focus:ring-violet-500/50" 
+                    required
+                    className="mt-0.5 rounded bg-white/10 border-white/20 text-violet-500 focus:ring-violet-500/50 cursor-pointer" 
                   />
-                  <span>
+                  <span className="group-hover:text-white/90 transition-colors">
                     Accetto i{" "}
-                    <Link href="/terms" className="text-violet-400 hover:text-violet-300 transition-colors">
+                    <Link 
+                      href="/terms" 
+                      className="text-violet-400 hover:text-violet-300 underline transition-colors font-medium"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
                       Termini di Servizio
-                    </Link>{" "}
-                    e la{" "}
-                    <Link href="/privacy" className="text-violet-400 hover:text-violet-300 transition-colors">
-                      Privacy Policy
                     </Link>
+                    {" "}(obbligatorio)
                   </span>
                 </label>
+
+                {/* Checkbox 2: Privacy Policy */}
+                <label className="flex items-start gap-3 text-sm text-white/70 cursor-pointer group">
+                  <input 
+                    type="checkbox" 
+                    checked={acceptPrivacy}
+                    onChange={(e) => setAcceptPrivacy(e.target.checked)}
+                    required
+                    className="mt-0.5 rounded bg-white/10 border-white/20 text-violet-500 focus:ring-violet-500/50 cursor-pointer" 
+                  />
+                  <span className="group-hover:text-white/90 transition-colors">
+                    Ho letto e compreso l'{" "}
+                    <Link 
+                      href="/privacy" 
+                      className="text-violet-400 hover:text-violet-300 underline transition-colors font-medium"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Informativa Privacy
+                    </Link>
+                    {" "}(obbligatorio)
+                  </span>
+                </label>
+
+                {/* Informativa breve - Art. 13 GDPR */}
+                <div className="mt-3 p-3 rounded-lg bg-white/5 border border-white/10">
+                  <p className="text-xs text-white/60 leading-relaxed">
+                    <strong className="text-white/80">ℹ️ Informativa breve:</strong><br />
+                    I tuoi dati (username, email, password criptata) saranno trattati da{" "}
+                    <strong className="text-white/80">[Inserisci Nome/Azienda]</strong> per la gestione 
+                    del tuo account e l'erogazione del servizio. 
+                    Base giuridica: esecuzione del contratto (Art. 6.1.b GDPR). 
+                    Consulta l'<Link href="/privacy" className="text-violet-400 hover:text-violet-300 underline" target="_blank" rel="noopener noreferrer">Informativa completa</Link>.
+                  </p>
+                </div>
               </div>
               
               <button
