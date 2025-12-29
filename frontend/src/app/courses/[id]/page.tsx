@@ -1439,8 +1439,9 @@ export default function CourseViewerPage() {
 
                       {/* Description */}
                       <p className="text-white/70 mb-8 text-base sm:text-lg leading-relaxed">
-                        Questo video richiede l&apos;autenticazione Microsoft.<br />
-                        Effettua il login per accedere al contenuto.
+                        Per accedere ai video, devi prima autenticarti sulla cartella del corso.<br />
+                        Clicca sul bottone qui sotto, accedi alla cartella su OneDrive/SharePoint,<br />
+                        poi <strong className="text-white">torna su questa pagina</strong> e riprova a caricare il video.
                       </p>
 
                       {/* Buttons */}
@@ -1448,44 +1449,33 @@ export default function CourseViewerPage() {
                         <button
                           onClick={(e) => {
                             e.preventDefault();
-                            if (!selectedFile?.file.url) return;
+                            if (!courseData?.url) return;
                             
-                            // Open video link in new window/tab
-                            const authWindow = window.open(selectedFile.file.url, '_blank');
+                            // Open course folder link in new window/tab
+                            const authWindow = window.open(courseData.url, '_blank');
                             
                             if (!authWindow) {
                               // Popup blocked - show message
                               alert('Per favore, consenti i popup per questo sito e riprova.');
                               return;
                             }
-                            
-                            // Check periodically if window was closed
-                            const checkInterval = setInterval(() => {
-                              if (authWindow.closed) {
-                                clearInterval(checkInterval);
-                                // Auto-reload video when user closes the auth window
-                                setTimeout(() => {
-                                  setIsUnauthorized(false);
-                                  setVideoKey(prev => prev + 1);
-                                }, 500);
-                              }
-                            }, 500);
-                            
-                            // Cleanup after 15 minutes
-                            setTimeout(() => {
-                              clearInterval(checkInterval);
-                            }, 15 * 60 * 1000);
                           }}
                           className="inline-flex items-center justify-center gap-3 px-8 py-4 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold text-base hover:shadow-xl hover:shadow-blue-500/30 hover:scale-105 transition-[transform,shadow] duration-200 will-change-transform"
                         >
                           <svg
                             className="w-6 h-6"
-                            fill="currentColor"
+                            fill="none"
                             viewBox="0 0 24 24"
+                            stroke="currentColor"
                           >
-                            <path d="M11.4 24H0V12.6h11.4V24zM24 24H12.6V12.6H24V24zM11.4 11.4H0V0h11.4v11.4zm12.6 0H12.6V0H24v11.4z" />
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
+                            />
                           </svg>
-                          Accedi con Microsoft
+                          Accedi alla Cartella del Corso
                         </button>
                         
                         <button
@@ -1508,7 +1498,7 @@ export default function CourseViewerPage() {
                               d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
                             />
                           </svg>
-                          Riprova manualmente
+                          Ho effettuato l&apos;accesso, riprova
                         </button>
                       </div>
                     </div>

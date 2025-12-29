@@ -34,6 +34,7 @@ export interface CoursePart {
 export interface Course {
   name: string;
   duration: number;
+  url: string; // URL della cartella OneDrive/SharePoint del corso
   parts: CoursePart[] | null;
   files: CourseFile[] | null;
 }
