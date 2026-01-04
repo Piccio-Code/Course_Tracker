@@ -57,7 +57,13 @@ func main() {
 		}
 
 	} else {
-		infoLog.Println(color.RedString("You have disable onedrive API connection"))
+		infoLog.Println(color.RedString("You have disable onedrive API connection."))
+	}
+
+	if *devFlag {
+		infoLog.Println(color.RedString("You are in development mode."))
+	} else {
+		infoLog.Println(color.GreenString("You are in production mode"))
 	}
 
 	dbPool, err := ConnectToDb(os.Getenv("DATABASE_URL"))

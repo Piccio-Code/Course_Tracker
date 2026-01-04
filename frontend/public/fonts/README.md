@@ -82,3 +82,5 @@ Dopo aver copiato i file:
 - **Art. 6 GDPR**: Consenso esplicito per trasferimento dati personali
 - **Linee guida Garante Privacy italiano**: https://www.garanteprivacy.it
 
+
+

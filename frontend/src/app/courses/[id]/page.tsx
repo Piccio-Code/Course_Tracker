@@ -187,16 +187,6 @@ const VideoPlayer = memo(function VideoPlayer({ file, sectionName, videoKey, onU
     }
   }, [initialTime, videoKey]);
 
-  const handleVideoError = (e: React.SyntheticEvent<HTMLVideoElement>) => {
-    const video = e.currentTarget;
-    const error = video.error;
-    
-    // Check if the error is due to network/authorization issues
-    if (error && (error.code === MediaError.MEDIA_ERR_NETWORK || error.code === MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED)) {
-      onUnauthorized();
-    }
-  };
-
   // Handle video pause - save progress when user pauses
   const handleVideoPause = useCallback((e: React.SyntheticEvent<HTMLVideoElement>) => {
     const video = e.currentTarget;
@@ -237,7 +227,6 @@ const VideoPlayer = memo(function VideoPlayer({ file, sectionName, videoKey, onU
                 className="w-full aspect-video bg-black"
                 src={file.url}
                 preload="metadata"
-                onError={handleVideoError}
                 onPause={handleVideoPause}
                 onSeeking={handleVideoSeeking}
                 onEnded={handleVideoEnded}

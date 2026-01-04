@@ -105,3 +105,5 @@ export const CONSENT_STORAGE_KEY = 'coursetracker_cookie_consent';
  */
 export const CONSENT_EXPIRY_DAYS = 180;
 
+
+

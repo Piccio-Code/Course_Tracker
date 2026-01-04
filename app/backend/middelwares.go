@@ -28,7 +28,7 @@ func (app *Application) Logger(next http.Handler) http.Handler {
 
 		next.ServeHTTP(logWriter, r)
 
-		app.InfoLog.Printf("%s %d %s %v", r.Method, logWriter.code, r.URL.Path, time.Since(start))
+		app.InfoLog.Printf("%s %v %d %s %v", r.Method, r.Host, logWriter.code, r.URL.Path, time.Since(start))
 	})
 }
 
