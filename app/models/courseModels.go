@@ -27,7 +27,7 @@ type CoursesListResponse struct {
 	LastUpdated time.Time `json:"lastUpdated"`
 }
 
-func (m *CourseModel) Insert(ctx context.Context, course *Course, userId int) (id int, err error) {
+func (m *CourseModel) Insert(ctx context.Context, course *Course, userId string) (id int, err error) {
 
 	tx, err := m.DB.Begin(ctx)
 
@@ -60,7 +60,7 @@ func (m *CourseModel) Insert(ctx context.Context, course *Course, userId int) (i
 	return id, nil
 }
 
-func (m *CourseModel) Get(ctx context.Context, id int, userId int) (course CourseResponse, err error) {
+func (m *CourseModel) Get(ctx context.Context, id int, userId string) (course CourseResponse, err error) {
 	tx, err := m.DB.Begin(ctx)
 
 	if err != nil {
@@ -88,7 +88,7 @@ func (m *CourseModel) Get(ctx context.Context, id int, userId int) (course Cours
 	return course, nil
 }
 
-func (m *CourseModel) List(ctx context.Context, userId int) (courses []CoursesListResponse, err error) {
+func (m *CourseModel) List(ctx context.Context, userId string) (courses []CoursesListResponse, err error) {
 	tx, err := m.DB.Begin(ctx)
 
 	if err != nil {
@@ -134,7 +134,7 @@ func (m *CourseModel) List(ctx context.Context, userId int) (courses []CoursesLi
 	return courses, nil
 }
 
-func (m *CourseModel) Delete(ctx context.Context, id int, userId int) error {
+func (m *CourseModel) Delete(ctx context.Context, id int, userId string) error {
 	tx, err := m.DB.Begin(ctx)
 
 	if err != nil {
@@ -162,7 +162,7 @@ func (m *CourseModel) Delete(ctx context.Context, id int, userId int) error {
 	return tx.Commit(ctx)
 }
 
-func (m *CourseModel) Update(ctx context.Context, course *Course, id int, userId int) (updatedId int, err error) {
+func (m *CourseModel) Update(ctx context.Context, course *Course, id int, userId string) (updatedId int, err error) {
 	tx, err := m.DB.Begin(ctx)
 
 	if err != nil {

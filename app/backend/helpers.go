@@ -5,10 +5,9 @@ import (
 	"net/http"
 )
 
-type CurrentUserId string
+type CurrentUserKey string
 
-const CurrentUserIdKey = CurrentUserId("AuthenticatedUserKey")
-const AuthenticatedUserId = "AuthenticatedUserId"
+const CurrentUser = CurrentUserKey("AuthenticatedUserKey")
 
 type CourseForm struct {
 	URL  string `form:"link"`

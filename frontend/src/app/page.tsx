@@ -1,13 +1,11 @@
 "use client";
 
-import PageBackground from "@/components/PageBackground";
 import Footer from "@/components/Footer";
 import Link from "next/link";
 
 export default function Home() {
   return (
-    <div className="relative min-h-screen overflow-hidden bg-black">
-      <PageBackground />
+    <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-gray-900 via-black to-violet-950">
       
       {/* Content */}
       <main className="relative z-10 flex min-h-screen flex-col items-center justify-center px-6 py-24">

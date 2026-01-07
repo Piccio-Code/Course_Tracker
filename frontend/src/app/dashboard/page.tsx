@@ -1,9 +1,8 @@
 "use client";
 
-import PageBackground from "@/components/PageBackground";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { useSession, signOut } from "@/lib/auth-client";
 import {
-  getUser,
-  logout,
   getCourses,
   createCourse,
   deleteCourse,
@@ -12,7 +11,6 @@ import {
   formatDate,
   timeAgo,
   getProgress,
-  User,
   CoursesListResponse,
   Progress,
 } from "@/lib/api";
@@ -654,9 +652,9 @@ const NewCourseModal = memo(function NewCourseModal({ isOpen, onClose, onSuccess
   );
 });
 
-export default function Dashboard() {
+function DashboardContent() {
   const router = useRouter();
-  const [user, setUser] = useState<User | null>(null);
+  const { data: session } = useSession();
   const [courses, setCourses] = useState<CoursesListResponse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingCourses, setIsLoadingCourses] = useState(false);
@@ -704,33 +702,25 @@ export default function Dashboard() {
     }
   }, []);
 
-  // Check auth e carica corsi iniziali
+  // Carica corsi iniziali
   useEffect(() => {
-    async function checkAuth() {
-      console.log("[Dashboard] Checking authentication...");
-      const currentUser = await getUser();
-
-      if (!currentUser) {
-        console.log("[Dashboard] User not authenticated, redirecting to login");
-        router.push("/login");
-        return;
-      }
-
-      console.log("[Dashboard] User authenticated:", currentUser);
-      setUser(currentUser);
-
+    async function loadData() {
+      console.log("[Dashboard] Loading data...");
+      
       // Fetch courses and progress in parallel
       await Promise.all([fetchCourses(), fetchProgress()]);
 
       setIsLoading(false);
     }
 
-    checkAuth();
-  }, [router, fetchCourses, fetchProgress]);
+    if (session) {
+      loadData();
+    }
+  }, [session, fetchCourses, fetchProgress]);
 
   const handleLogout = async () => {
     console.log("[Dashboard] Logging out...");
-    await logout();
+    await signOut();
     router.push("/login");
   };
 
@@ -834,9 +824,7 @@ export default function Dashboard() {
 
   if (isLoading) {
     return (
-      <div className="relative min-h-screen overflow-hidden bg-black">
-        <PageBackground />
-        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+      <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-gray-900 via-black to-violet-950">
         <main className="relative z-10 flex min-h-screen items-center justify-center">
           <div className="flex flex-col items-center gap-4 text-white">
             {/* Animated loader */}
@@ -856,11 +844,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-black">
-      <PageBackground />
-      {/* Optimized overlay - reduced blur for performance */}
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-
+    <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-gray-900 via-black to-violet-950">
       <main className="relative z-10 min-h-screen px-6 py-8">
         {/* Header */}
         <header className="flex items-center justify-between max-w-7xl mx-auto mb-12">
@@ -873,8 +857,8 @@ export default function Dashboard() {
 
           <div className="flex items-center gap-4">
             <div className="text-right">
-              <p className="text-white font-medium">{user?.username}</p>
-              <p className="text-white/60 text-sm">{user?.email}</p>
+              <p className="text-white font-medium">{session?.user?.name}</p>
+              <p className="text-white/60 text-sm">{session?.user?.email}</p>
             </div>
             <button
               onClick={handleLogout}
@@ -1274,5 +1258,13 @@ export default function Dashboard() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function Dashboard() {
+  return (
+    <ProtectedRoute>
+      <DashboardContent />
+    </ProtectedRoute>
   );
 }

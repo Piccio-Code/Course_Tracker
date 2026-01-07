@@ -3,136 +3,9 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	. "github.com/Piccio-Code/Course_Tracker/app/models"
 	"net/http"
 	"strconv"
 )
-
-func (app *Application) Signup(w http.ResponseWriter, r *http.Request) {
-	userForm, err := app.GetUserFrom(r)
-
-	if err != nil {
-		app.ErrorLog.Println(err)
-		http.Error(w, fmt.Sprintf("Error parsing the body"), http.StatusBadRequest)
-		return
-	}
-
-	id, err := app.UserModel.Insert(r.Context(), User{Username: userForm.Username, Email: userForm.Email, Password: userForm.Password})
-
-	if err != nil {
-		app.ErrorLog.Println(err)
-		http.Error(w, fmt.Sprintf("Error signing up"), http.StatusBadRequest)
-		return
-	}
-
-	err = app.SessionManager.RenewToken(r.Context())
-
-	if err != nil {
-		app.ErrorLog.Println(err)
-		http.Error(w, fmt.Sprintf("Error renewing the token up"), http.StatusInternalServerError)
-		return
-	}
-
-	app.SessionManager.Put(r.Context(), AuthenticatedUserId, id)
-	fmt.Fprintln(w, "Successfully sign up")
-}
-
-func (app *Application) Login(w http.ResponseWriter, r *http.Request) {
-	userForm, err := app.GetUserFrom(r)
-
-	if err != nil {
-		app.ErrorLog.Println(err)
-		http.Error(w, fmt.Sprintf("Error parsing the body"), http.StatusBadRequest)
-		return
-	}
-
-	id, err := app.UserModel.Get(r.Context(), User{Username: userForm.Username, Email: userForm.Email, Password: userForm.Password})
-
-	if err != nil {
-		app.ErrorLog.Println(err)
-		http.Error(w, fmt.Sprintf("Error getting the user"), http.StatusInternalServerError)
-		return
-	}
-
-	err = app.SessionManager.RenewToken(r.Context())
-
-	if err != nil {
-		app.ErrorLog.Println(err)
-		http.Error(w, fmt.Sprintf("Error renewing the token up"), http.StatusInternalServerError)
-		return
-	}
-
-	app.SessionManager.Put(r.Context(), AuthenticatedUserId, id)
-
-	fmt.Fprintln(w, "Successfully login")
-}
-
-func (app *Application) Logout(w http.ResponseWriter, r *http.Request) {
-	app.SessionManager.Pop(r.Context(), AuthenticatedUserId)
-	err := app.SessionManager.RenewToken(r.Context())
-
-	if err != nil {
-		app.ErrorLog.Println(err)
-		http.Error(w, "Error renewing the toke", http.StatusInternalServerError)
-		return
-	}
-
-	fmt.Fprintln(w, "Successfully logout")
-}
-
-func (app *Application) GetUser(w http.ResponseWriter, r *http.Request) {
-	id, ok := r.Context().Value(CurrentUserIdKey).(int)
-
-	if !ok {
-		http.Error(w, "Error parsing the User id", http.StatusBadRequest)
-		return
-	}
-
-	user, err := app.UserModel.GetId(r.Context(), id)
-
-	if err != nil {
-		app.ErrorLog.Println(err)
-		http.Error(w, "Error retrieving the User", http.StatusBadRequest)
-		return
-	}
-
-	pretty, err := json.MarshalIndent(user, " ", "\t")
-
-	if err != nil {
-		app.ErrorLog.Println(err)
-		http.Error(w, "Error encoding the user to JSON", http.StatusBadRequest)
-		return
-	}
-
-	fmt.Fprintln(w, string(pretty))
-}
-
-func (app *Application) ModifyUser(w http.ResponseWriter, r *http.Request) {
-	id, ok := r.Context().Value(CurrentUserIdKey).(int)
-
-	if !ok {
-		http.Error(w, "Error parsing the User id", http.StatusBadRequest)
-		return
-	}
-
-	newUserOptions, err := app.GetUserModifyForm(r)
-
-	if err != nil {
-		app.ErrorLog.Println(err)
-		http.Error(w, "Error parsing the body", http.StatusBadRequest)
-		return
-	}
-
-	err = app.UserModel.Modify(r.Context(), newUserOptions.Username, newUserOptions.Email, id)
-
-	if err != nil {
-		app.ErrorLog.Println(err)
-		http.Error(w, "Error modifying the user", http.StatusBadRequest)
-		return
-	}
-
-	http.Redirect(w, r, "/user", http.StatusSeeOther)
-}
 
 func (app *Application) CreateCourse(w http.ResponseWriter, r *http.Request) {
 
@@ -144,7 +17,7 @@ func (app *Application) CreateCourse(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userId, ok := r.Context().Value(CurrentUserIdKey).(int)
+	user, ok := r.Context().Value(CurrentUser).(User)
 
 	if !ok {
 		http.Error(w, "Error parsing the User id", http.StatusBadRequest)
@@ -159,7 +32,7 @@ func (app *Application) CreateCourse(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id, err := app.CourseModel.Insert(r.Context(), course, userId)
+	id, err := app.CourseModel.Insert(r.Context(), course, user.ID)
 
 	if err != nil {
 		app.ErrorLog.Println(err)
@@ -171,14 +44,14 @@ func (app *Application) CreateCourse(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *Application) ViewCourses(w http.ResponseWriter, r *http.Request) {
-	userId, ok := r.Context().Value(CurrentUserIdKey).(int)
+	user, ok := r.Context().Value(CurrentUser).(User)
 
 	if !ok {
 		http.Error(w, "Error parsing the User id", http.StatusBadRequest)
 		return
 	}
 
-	courses, err := app.CourseModel.List(r.Context(), userId)
+	courses, err := app.CourseModel.List(r.Context(), user.ID)
 
 	if err != nil {
 		app.ErrorLog.Println(err)
@@ -212,14 +85,14 @@ func (app *Application) ViewCourse(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userId, ok := r.Context().Value(CurrentUserIdKey).(int)
+	user, ok := r.Context().Value(CurrentUser).(User)
 
 	if !ok {
 		http.Error(w, "Error parsing the User id", http.StatusBadRequest)
 		return
 	}
 
-	course, err := app.CourseModel.Get(r.Context(), id, userId)
+	course, err := app.CourseModel.Get(r.Context(), id, user.ID)
 
 	if err != nil {
 		app.ErrorLog.Println(err)
@@ -254,14 +127,14 @@ func (app *Application) DeleteCourse(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userId, ok := r.Context().Value(CurrentUserIdKey).(int)
+	user, ok := r.Context().Value(CurrentUser).(User)
 
 	if !ok {
 		http.Error(w, "Error parsing the User id", http.StatusBadRequest)
 		return
 	}
 
-	err = app.CourseModel.Delete(r.Context(), id, userId)
+	err = app.CourseModel.Delete(r.Context(), id, user.ID)
 
 	if err != nil {
 		app.ErrorLog.Println(err)
@@ -295,7 +168,7 @@ func (app *Application) UpdateCourse(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userId, ok := r.Context().Value(CurrentUserIdKey).(int)
+	user, ok := r.Context().Value(CurrentUser).(User)
 
 	if !ok {
 		http.Error(w, "Error parsing the User id", http.StatusBadRequest)
@@ -303,7 +176,7 @@ func (app *Application) UpdateCourse(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if courseForm.URL == "" {
-		course, err := app.CourseModel.Get(r.Context(), id, userId)
+		course, err := app.CourseModel.Get(r.Context(), id, user.ID)
 
 		if err != nil {
 			app.ErrorLog.Println(err)
@@ -326,7 +199,7 @@ func (app *Application) UpdateCourse(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id, err = app.CourseModel.Update(r.Context(), course, id, userId)
+	id, err = app.CourseModel.Update(r.Context(), course, id, user.ID)
 
 	if err != nil {
 		app.ErrorLog.Println(err)
@@ -351,14 +224,14 @@ func (app *Application) GetCourseProgress(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	userId, ok := r.Context().Value(CurrentUserIdKey).(int)
+	user, ok := r.Context().Value(CurrentUser).(User)
 
 	if !ok {
 		http.Error(w, "Error parsing the User id", http.StatusBadRequest)
 		return
 	}
 
-	progress, err := app.ProgressModel.GetCourseProgress(r.Context(), id, userId)
+	progress, err := app.ProgressModel.GetCourseProgress(r.Context(), id, user.ID)
 
 	if err != nil {
 		app.ErrorLog.Println(err)
@@ -392,7 +265,7 @@ func (app *Application) InsertCourseProgress(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	userId, ok := r.Context().Value(CurrentUserIdKey).(int)
+	user, ok := r.Context().Value(CurrentUser).(User)
 
 	if !ok {
 		http.Error(w, "Error parsing the User id", http.StatusBadRequest)
@@ -407,7 +280,7 @@ func (app *Application) InsertCourseProgress(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	err = app.ProgressModel.Insert(r.Context(), id, userId, progressForm.WatchedTimeMills, progressForm.Completed, progressForm.URL)
+	err = app.ProgressModel.Insert(r.Context(), id, user.ID, progressForm.WatchedTimeMills, progressForm.Completed, progressForm.URL)
 
 	if err != nil {
 		app.ErrorLog.Println(err)
@@ -433,7 +306,7 @@ func (app *Application) UpdateCourseProgress(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	userId, ok := r.Context().Value(CurrentUserIdKey).(int)
+	user, ok := r.Context().Value(CurrentUser).(User)
 
 	if !ok {
 		http.Error(w, "Error parsing the User id", http.StatusBadRequest)
@@ -448,7 +321,7 @@ func (app *Application) UpdateCourseProgress(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	err = app.ProgressModel.Update(r.Context(), id, userId, progressForm.WatchedTimeMills, progressForm.Completed, progressForm.URL)
+	err = app.ProgressModel.Update(r.Context(), id, user.ID, progressForm.WatchedTimeMills, progressForm.Completed, progressForm.URL)
 
 	if err != nil {
 		app.ErrorLog.Println(err)
@@ -473,7 +346,7 @@ func (app *Application) DeleteCourseProgress(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	userId, ok := r.Context().Value(CurrentUserIdKey).(int)
+	user, ok := r.Context().Value(CurrentUser).(User)
 
 	if !ok {
 		http.Error(w, "Error parsing the User id", http.StatusBadRequest)
@@ -488,7 +361,7 @@ func (app *Application) DeleteCourseProgress(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	err = app.ProgressModel.Delete(r.Context(), id, userId, progressForm.URL)
+	err = app.ProgressModel.Delete(r.Context(), id, user.ID, progressForm.URL)
 
 	if err != nil {
 		app.ErrorLog.Println(err)
@@ -500,14 +373,14 @@ func (app *Application) DeleteCourseProgress(w http.ResponseWriter, r *http.Requ
 }
 
 func (app *Application) GetProgress(w http.ResponseWriter, r *http.Request) {
-	userId, ok := r.Context().Value(CurrentUserIdKey).(int)
+	user, ok := r.Context().Value(CurrentUser).(User)
 
 	if !ok {
 		http.Error(w, "Error parsing the User id", http.StatusBadRequest)
 		return
 	}
 
-	progress, err := app.ProgressModel.GetProgresses(r.Context(), userId)
+	progress, err := app.ProgressModel.GetProgresses(r.Context(), user.ID)
 
 	if err != nil {
 		app.ErrorLog.Println(err)

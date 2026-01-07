@@ -24,7 +24,7 @@ type Progress struct {
 	TimeWatched     int    `json:"time_watched,omitempty"`
 }
 
-func (p *ProgressModel) Insert(ctx context.Context, courseId, userId, watchedTimeMills int, completed bool, url string) error {
+func (p *ProgressModel) Insert(ctx context.Context, courseId int, userId string, watchedTimeMills int, completed bool, url string) error {
 	tx, err := p.DB.Begin(ctx)
 
 	if err != nil {
@@ -44,7 +44,7 @@ func (p *ProgressModel) Insert(ctx context.Context, courseId, userId, watchedTim
 	return tx.Commit(ctx)
 }
 
-func (p *ProgressModel) Update(ctx context.Context, courseId, userId, watchedTimeMills int, completed bool, url string) error {
+func (p *ProgressModel) Update(ctx context.Context, courseId int, userId string, watchedTimeMills int, completed bool, url string) error {
 	tx, err := p.DB.Begin(ctx)
 
 	if err != nil {
@@ -66,7 +66,7 @@ func (p *ProgressModel) Update(ctx context.Context, courseId, userId, watchedTim
 	return tx.Commit(ctx)
 }
 
-func (p *ProgressModel) Delete(ctx context.Context, courseId, userId int, url string) error {
+func (p *ProgressModel) Delete(ctx context.Context, courseId int, userId string, url string) error {
 	tx, err := p.DB.Begin(ctx)
 
 	if err != nil {
@@ -86,7 +86,7 @@ func (p *ProgressModel) Delete(ctx context.Context, courseId, userId int, url st
 	return tx.Commit(ctx)
 }
 
-func (p *ProgressModel) GetCourseProgress(ctx context.Context, courseId, userId int) (courseProgress []ResourceProgress, err error) {
+func (p *ProgressModel) GetCourseProgress(ctx context.Context, courseId int, userId string) (courseProgress []ResourceProgress, err error) {
 
 	tx, err := p.DB.Begin(ctx)
 
@@ -125,7 +125,7 @@ func (p *ProgressModel) GetCourseProgress(ctx context.Context, courseId, userId 
 	return courseProgress, nil
 }
 
-func (p *ProgressModel) GetProgresses(ctx context.Context, userId int) (userProgress []Progress, err error) {
+func (p *ProgressModel) GetProgresses(ctx context.Context, userId string) (userProgress []Progress, err error) {
 
 	tx, err := p.DB.Begin(ctx)
 

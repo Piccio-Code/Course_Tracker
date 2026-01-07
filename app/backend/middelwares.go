@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"github.com/lestrrat-go/jwx/v3/jwk"
+	"github.com/lestrrat-go/jwx/v3/jwt"
 	"net/http"
 	"time"
 )
@@ -10,6 +12,12 @@ type logResponder struct {
 	http.ResponseWriter
 	code int
 	set  bool
+}
+
+type User struct {
+	ID       string
+	Email    string
+	Username string
 }
 
 func (rw *logResponder) WriteHeader(code int) {
@@ -35,23 +43,51 @@ func (app *Application) Logger(next http.Handler) http.Handler {
 func (app *Application) RequireAuthentication(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-		id := app.SessionManager.GetInt(r.Context(), AuthenticatedUserId)
-		exist, err := app.UserModel.Exist(r.Context(), id)
+		keyset, err := jwk.Fetch(r.Context(), app.BaseUrl+"/api/auth/jwks")
 
 		if err != nil {
-			app.ErrorLog.Println(err)
-			http.Error(w, "Error checking user existence", http.StatusInternalServerError)
+			app.ErrorLog.Printf("[Auth] error fetching JWKS keys (this might be expected): %s", err)
+			http.Error(w, "Authentication endpoint not configured properly", http.StatusUnauthorized)
 			return
 		}
+
+		token, err := jwt.ParseRequest(r, jwt.WithKeySet(keyset))
+
+		if err != nil {
+			app.ErrorLog.Printf("[Auth] error parsing the token: %s", err)
+			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+			return
+		}
+
+		app.InfoLog.Printf("[Auth] Token parsed successfully")
+
+		id, exist := token.Subject()
 
 		if !exist {
-			http.Error(w, "Error user is Unauthorized", http.StatusUnauthorized)
+			app.ErrorLog.Printf("User Not Found: %s \n", err)
+			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 			return
 		}
 
-		w.Header().Add("Cache-Control", "no-store")
+		var username string
 
-		ctx := context.WithValue(r.Context(), CurrentUserIdKey, id)
+		err = token.Get("name", &username)
+		if err != nil {
+			app.ErrorLog.Printf("Username field not found in the token: %s \n", err)
+			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+			return
+		}
+
+		var email string
+
+		err = token.Get("email", &email)
+		if err != nil {
+			app.ErrorLog.Printf("Email field not found in the token: %s \n", err)
+			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+			return
+		}
+
+		ctx := context.WithValue(r.Context(), CurrentUser, User{id, username, email})
 		r = r.WithContext(ctx)
 
 		next.ServeHTTP(w, r)

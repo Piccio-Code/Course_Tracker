@@ -1,6 +1,5 @@
 "use client";
 
-import PageBackground from "@/components/PageBackground";
 import {
   getCourse,
   formatDuration,
@@ -1060,9 +1059,7 @@ export default function CourseViewerPage() {
 
   if (isLoading) {
     return (
-      <div className="relative h-screen overflow-hidden bg-black">
-        <PageBackground />
-        <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
+      <div className="relative h-screen overflow-hidden bg-gradient-to-br from-gray-900 via-black to-violet-950">
         <main className="relative z-10 flex h-full items-center justify-center">
           <div className="flex flex-col items-center gap-4 text-white">
             <div className="relative w-16 h-16">
@@ -1082,9 +1079,7 @@ export default function CourseViewerPage() {
 
   if (error || !course) {
     return (
-      <div className="relative h-screen overflow-hidden bg-black">
-        <PageBackground />
-        <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
+      <div className="relative h-screen overflow-hidden bg-gradient-to-br from-gray-900 via-black to-violet-950">
         <main className="relative z-10 flex h-full items-center justify-center px-6">
           <div className="text-center">
             <div className="mb-8">
@@ -1138,11 +1133,7 @@ export default function CourseViewerPage() {
   const courseData = course.courseResources;
 
   return (
-    <div className="relative h-screen overflow-hidden bg-black">
-      <PageBackground />
-      {/* Optimized overlay - reduced blur for better performance */}
-      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
-
+    <div className="relative h-screen overflow-hidden bg-gradient-to-br from-gray-900 via-black to-violet-950">
       <main className="relative z-10 h-full flex flex-col">
         {/* Top Header Bar with Navigation */}
         <header className="flex-shrink-0 px-4 md:px-6 py-3 border-b border-white/10 bg-black/60 backdrop-blur-sm">

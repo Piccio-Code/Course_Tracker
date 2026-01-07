@@ -3,10 +3,9 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	. "github.com/Piccio-Code/Course_Tracker/Wrapper"
 	. "github.com/Piccio-Code/Course_Tracker/app/models"
-	"github.com/alexedwards/scs/pgxstore"
-	"github.com/alexedwards/scs/v2"
 	"github.com/fatih/color"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
@@ -14,27 +13,26 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"time"
 )
 
 type Application struct {
+	BaseUrl string
+
 	Onedrive *Onedrive
 
 	ErrorLog *log.Logger
 	InfoLog  *log.Logger
 
 	CourseModel   *CourseModel
-	UserModel     *UserModel
 	ProgressModel *ProgressModel
-
-	SessionManager *scs.SessionManager
-	Cors           *cors.Cors
+	Cors          *cors.Cors
 }
 
 func main() {
 
 	onedriveFlag := flag.Bool("onedrive", false, "This flag will connect with onedrive API")
 	devFlag := flag.Bool("dev", false, "This flag will disable secure cookie only sent by HTTPS, use only for production")
+	baseUrl := flag.String("baseUrl", "http://localhost:3000", "This is used for CORS and authentication")
 
 	flag.Parse()
 
@@ -66,36 +64,32 @@ func main() {
 		infoLog.Println(color.GreenString("You are in production mode"))
 	}
 
+	infoLog.Println(color.GreenString(fmt.Sprintf("The base url is: %v", *baseUrl)))
+
 	dbPool, err := ConnectToDb(os.Getenv("DATABASE_URL"))
 
 	if err != nil {
 		errorLog.Fatal(err)
 	}
 
-	sessionManager := scs.New()
-	sessionManager.Store = pgxstore.New(dbPool)
-	sessionManager.Lifetime = 12 * time.Hour
-	sessionManager.Cookie.HttpOnly = true
-	sessionManager.Cookie.Persist = true
-	sessionManager.Cookie.Secure = !*devFlag              // allow HTTP
-	sessionManager.Cookie.SameSite = http.SameSiteLaxMode // Lax or None
-
 	corsOptions := cors.Options{
-		AllowedOrigins:      []string{"https://coursetracker.it", "http://192.168.1.3:3000", "http://localhost:3000", "http://10.248.48.196:3000"},
+		AllowedOrigins:      []string{"http://localhost:3000", "https://coursetracker.it", "https://www.coursetracker.it"},
 		AllowCredentials:    true,
 		AllowPrivateNetwork: true,
-		AllowedMethods:      []string{"GET", "POST", "PUT", "DELETE", "HEAD"},
+		AllowedMethods:      []string{"GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS"},
+		AllowedHeaders:      []string{"Authorization", "Content-Type", "Accept"},
+		ExposedHeaders:      []string{"Content-Length"},
+		MaxAge:              300, // Cache preflight requests for 5 minutes
 	}
 
 	app := Application{
-		Onedrive:       onedrive,
-		ErrorLog:       errorLog,
-		InfoLog:        infoLog,
-		CourseModel:    &CourseModel{DB: dbPool},
-		UserModel:      &UserModel{DB: dbPool},
-		ProgressModel:  &ProgressModel{DB: dbPool},
-		SessionManager: sessionManager,
-		Cors:           cors.New(corsOptions),
+		BaseUrl:       *baseUrl,
+		Onedrive:      onedrive,
+		ErrorLog:      errorLog,
+		InfoLog:       infoLog,
+		CourseModel:   &CourseModel{DB: dbPool},
+		ProgressModel: &ProgressModel{DB: dbPool},
+		Cors:          cors.New(corsOptions),
 	}
 
 	srv := http.Server{

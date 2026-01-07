@@ -1,3 +1,5 @@
+import { getAuth, putAuth, postAuth, deleteAuth } from "./api-helper";
+
 // Configurazione API - Modifica qui l'URL base del backend https://api.coursetracker.it o http://localhost:8080
 export const API_BASE_URL = "http://localhost:8080";
 
@@ -116,104 +118,13 @@ export interface ApiResult<T> {
 }
 
 // ============================================================================
-// AUTH API - /auth/*
+// AUTH API - Now handled by Better Auth
+// See @/lib/auth-client for authentication methods:
+// - signIn.email({ email, password })
+// - signUp.email({ email, password, name })
+// - signOut()
+// - useSession() hook
 // ============================================================================
-
-/**
- * Login utente
- * POST /auth/login
- */
-export async function login(
-  username: string,
-  email: string,
-  password: string
-): Promise<ApiResult<void>> {
-  try {
-    const formData = new URLSearchParams();
-    formData.append("username", username);
-    formData.append("email", email);
-    formData.append("password", password);
-
-    const response = await fetch(`${API_BASE_URL}/auth/login`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: formData.toString(),
-      credentials: "include",
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      return { success: false, error: errorText || "Errore durante il login" };
-    }
-
-    return { success: true };
-  } catch (err) {
-    return {
-      success: false,
-      error: err instanceof Error ? err.message : "Errore durante il login",
-    };
-  }
-}
-
-/**
- * Registrazione utente
- * POST /auth/signup
- */
-export async function signup(
-  username: string,
-  email: string,
-  password: string
-): Promise<ApiResult<void>> {
-  try {
-    const formData = new URLSearchParams();
-    formData.append("username", username);
-    formData.append("email", email);
-    formData.append("password", password);
-
-    const response = await fetch(`${API_BASE_URL}/auth/signup`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: formData.toString(),
-      credentials: "include",
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      return {
-        success: false,
-        error: errorText || "Errore durante la registrazione",
-      };
-    }
-
-    return { success: true };
-  } catch (err) {
-    return {
-      success: false,
-      error:
-        err instanceof Error ? err.message : "Errore durante la registrazione",
-    };
-  }
-}
-
-/**
- * Logout utente
- * POST /auth/logout (protected)
- */
-export async function logout(): Promise<boolean> {
-  try {
-    const response = await fetch(`${API_BASE_URL}/auth/logout`, {
-      method: "POST",
-      credentials: "include",
-    });
-    return response.ok;
-  } catch {
-    return false;
-  }
-}
 
 // ============================================================================
 // USER API - /user
@@ -222,20 +133,12 @@ export async function logout(): Promise<boolean> {
 /**
  * Recupera i dati dell'utente autenticato
  * GET /user (protected)
+ * Note: Better Auth già fornisce i dati utente tramite useSession()
+ * Questa funzione è mantenuta per compatibilità con il backend Go
  */
 export async function getUser(): Promise<User | null> {
   try {
-    const response = await fetch(`${API_BASE_URL}/user`, {
-      method: "GET",
-      credentials: "include",
-    });
-
-    if (!response.ok) {
-      return null;
-    }
-
-    const user: User = await response.json();
-    return user;
+    return await getAuth<User>(`${API_BASE_URL}/user`);
   } catch {
     return null;
   }
@@ -250,27 +153,7 @@ export async function updateUser(
   email: string
 ): Promise<ApiResult<void>> {
   try {
-    const formData = new URLSearchParams();
-    formData.append("username", username);
-    formData.append("email", email);
-
-    const response = await fetch(`${API_BASE_URL}/user`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: formData.toString(),
-      credentials: "include",
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      return {
-        success: false,
-        error: errorText || "Errore durante l'aggiornamento dell'utente",
-      };
-    }
-
+    await putAuth(`${API_BASE_URL}/user`, { username, email });
     return { success: true };
   } catch (err) {
     return {
@@ -294,35 +177,8 @@ export async function updateUser(
 export async function getCourses(): Promise<CoursesListResponse[]> {
   try {
     console.log("[API] GET /courses - Fetching courses...");
-    
-    const response = await fetch(`${API_BASE_URL}/courses`, {
-      method: "GET",
-      credentials: "include",
-      headers: {
-        "Accept": "application/json",
-      },
-    });
-
-    console.log("[API] GET /courses - Response status:", response.status);
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("[API] GET /courses - Error:", errorText);
-      return [];
-    }
-
-    const text = await response.text();
-    console.log("[API] GET /courses - Raw response:", text);
-    
-    // Handle empty response
-    if (!text || text.trim() === "" || text.trim() === "null") {
-      console.log("[API] GET /courses - Empty or null response, returning []");
-      return [];
-    }
-
-    const courses: CoursesListResponse[] = JSON.parse(text);
+    const courses = await getAuth<CoursesListResponse[]>(`${API_BASE_URL}/courses`);
     console.log("[API] GET /courses - Parsed courses:", courses);
-    
     return courses || [];
   } catch (err) {
     console.error("[API] GET /courses - Exception:", err);
@@ -337,34 +193,8 @@ export async function getCourses(): Promise<CoursesListResponse[]> {
 export async function getCourse(id: number): Promise<CourseResponse | null> {
   try {
     console.log(`[API] GET /courses/${id} - Fetching course...`);
-    
-    const response = await fetch(`${API_BASE_URL}/courses/${id}`, {
-      method: "GET",
-      credentials: "include",
-      headers: {
-        "Accept": "application/json",
-      },
-    });
-
-    console.log(`[API] GET /courses/${id} - Response status:`, response.status);
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`[API] GET /courses/${id} - Error:`, errorText);
-      return null;
-    }
-
-    const text = await response.text();
-    console.log(`[API] GET /courses/${id} - Raw response:`, text);
-    
-    if (!text || text.trim() === "" || text.trim() === "null") {
-      console.log(`[API] GET /courses/${id} - Empty or null response`);
-      return null;
-    }
-
-    const course: CourseResponse = JSON.parse(text);
+    const course = await getAuth<CourseResponse>(`${API_BASE_URL}/courses/${id}`);
     console.log(`[API] GET /courses/${id} - Parsed course:`, course);
-    
     return course;
   } catch (err) {
     console.error(`[API] GET /courses/${id} - Exception:`, err);
@@ -381,35 +211,16 @@ export async function createCourse(
   name?: string
 ): Promise<ApiResult<{ id: number }>> {
   try {
-    const formData = new URLSearchParams();
-    formData.append("link", link);
+    const data: Record<string, string> = { link };
     if (name) {
-      formData.append("name", name);
+      data.name = name;
     }
 
-    const response = await fetch(`${API_BASE_URL}/courses`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: formData.toString(),
-      credentials: "include",
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      return {
-        success: false,
-        error: errorText || "Errore durante la creazione del corso",
-      };
-    }
-
-    // Il backend fa redirect, quindi prendiamo l'ID dall'URL finale
-    const url = response.url;
-    const idMatch = url.match(/\/courses\/(\d+)/);
-    const id = idMatch ? parseInt(idMatch[1], 10) : 0;
-
-    return { success: true, data: { id } };
+    await postAuth(`${API_BASE_URL}/courses`, data);
+    
+    // Backend potrebbe fare redirect, per ora restituiamo id 0
+    // TODO: aggiornare quando il backend restituisce l'ID nella response
+    return { success: true, data: { id: 0 } };
   } catch (err) {
     return {
       success: false,
@@ -431,29 +242,12 @@ export async function updateCourse(
   name?: string
 ): Promise<ApiResult<{ id: number }>> {
   try {
-    const formData = new URLSearchParams();
-    formData.append("link", link);
+    const data: Record<string, string> = { link };
     if (name) {
-      formData.append("name", name);
+      data.name = name;
     }
 
-    const response = await fetch(`${API_BASE_URL}/courses/${id}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: formData.toString(),
-      credentials: "include",
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      return {
-        success: false,
-        error: errorText || "Errore durante l'aggiornamento del corso",
-      };
-    }
-
+    await putAuth(`${API_BASE_URL}/courses/${id}`, data);
     return { success: true, data: { id } };
   } catch (err) {
     return {
@@ -472,19 +266,7 @@ export async function updateCourse(
  */
 export async function deleteCourse(id: number): Promise<ApiResult<void>> {
   try {
-    const response = await fetch(`${API_BASE_URL}/courses/${id}`, {
-      method: "DELETE",
-      credentials: "include",
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      return {
-        success: false,
-        error: errorText || "Errore durante l'eliminazione del corso",
-      };
-    }
-
+    await deleteAuth(`${API_BASE_URL}/courses/${id}`);
     return { success: true };
   } catch (err) {
     return {
@@ -516,25 +298,10 @@ export async function reloadCourse(id: number): Promise<ApiResult<void>> {
 
     // Call updateCourse with the same course data to trigger a reload
     // The backend will re-fetch the data from OneDrive
-    const response = await fetch(`${API_BASE_URL}/courses/${id}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: new URLSearchParams({
-        link: "", // Empty link signals a reload operation
-        name: course.courseResources.name,
-      }).toString(),
-      credentials: "include",
+    await putAuth(`${API_BASE_URL}/courses/${id}`, {
+      link: "", // Empty link signals a reload operation
+      name: course.courseResources.name,
     });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      return {
-        success: false,
-        error: errorText || "Errore durante il ricaricamento del corso",
-      };
-    }
 
     return { success: true };
   } catch (err) {
@@ -654,35 +421,8 @@ export function countTotalParts(course: Course): number {
 export async function getProgress(): Promise<Progress[]> {
   try {
     console.log("[API] GET /progress - Fetching progress...");
-    
-    const response = await fetch(`${API_BASE_URL}/progress`, {
-      method: "GET",
-      credentials: "include",
-      headers: {
-        "Accept": "application/json",
-      },
-    });
-
-    console.log("[API] GET /progress - Response status:", response.status);
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("[API] GET /progress - Error:", errorText);
-      return [];
-    }
-
-    const text = await response.text();
-    console.log("[API] GET /progress - Raw response:", text);
-    
-    // Handle empty response
-    if (!text || text.trim() === "" || text.trim() === "null") {
-      console.log("[API] GET /progress - Empty or null response, returning []");
-      return [];
-    }
-
-    const progressList: Progress[] = JSON.parse(text);
+    const progressList = await getAuth<Progress[]>(`${API_BASE_URL}/progress`);
     console.log("[API] GET /progress - Parsed progress:", progressList);
-    
     return progressList || [];
   } catch (err) {
     console.error("[API] GET /progress - Exception:", err);
@@ -697,35 +437,8 @@ export async function getProgress(): Promise<Progress[]> {
 export async function getCourseProgress(courseId: number): Promise<ResourceProgress[]> {
   try {
     console.log(`[API] GET /progress/${courseId} - Fetching course progress...`);
-    
-    const response = await fetch(`${API_BASE_URL}/progress/${courseId}`, {
-      method: "GET",
-      credentials: "include",
-      headers: {
-        "Accept": "application/json",
-      },
-    });
-
-    console.log(`[API] GET /progress/${courseId} - Response status:`, response.status);
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`[API] GET /progress/${courseId} - Error:`, errorText);
-      return [];
-    }
-
-    const text = await response.text();
-    console.log(`[API] GET /progress/${courseId} - Raw response:`, text);
-    
-    // Handle empty response
-    if (!text || text.trim() === "" || text.trim() === "null") {
-      console.log(`[API] GET /progress/${courseId} - Empty or null response, returning []`);
-      return [];
-    }
-
-    const progress: ResourceProgress[] = JSON.parse(text);
+    const progress = await getAuth<ResourceProgress[]>(`${API_BASE_URL}/progress/${courseId}`);
     console.log(`[API] GET /progress/${courseId} - Parsed progress:`, progress);
-    
     return progress || [];
   } catch (err) {
     console.error(`[API] GET /progress/${courseId} - Exception:`, err);
@@ -750,30 +463,11 @@ export async function insertCourseProgress(
       completed,
     });
 
-    const formData = new URLSearchParams();
-    formData.append("url", url);
-    formData.append("watched_time_mills", watchedTimeMills.toString());
-    formData.append("completed", completed.toString());
-
-    const response = await fetch(`${API_BASE_URL}/progress/${courseId}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: formData.toString(),
-      credentials: "include",
+    await postAuth(`${API_BASE_URL}/progress/${courseId}`, {
+      url,
+      watched_time_mills: watchedTimeMills.toString(),
+      completed: completed.toString(),
     });
-
-    console.log(`[API] POST /progress/${courseId} - Response status:`, response.status);
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`[API] POST /progress/${courseId} - Error:`, errorText);
-      return {
-        success: false,
-        error: errorText || "Errore durante il salvataggio del progresso",
-      };
-    }
 
     console.log(`[API] POST /progress/${courseId} - Progress saved successfully`);
     return { success: true };
@@ -806,30 +500,11 @@ export async function updateCourseProgress(
       completed,
     });
 
-    const formData = new URLSearchParams();
-    formData.append("url", url);
-    formData.append("watched_time_mills", watchedTimeMills.toString());
-    formData.append("completed", completed.toString());
-
-    const response = await fetch(`${API_BASE_URL}/progress/${courseId}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: formData.toString(),
-      credentials: "include",
+    await putAuth(`${API_BASE_URL}/progress/${courseId}`, {
+      url,
+      watched_time_mills: watchedTimeMills.toString(),
+      completed: completed.toString(),
     });
-
-    console.log(`[API] PUT /progress/${courseId} - Response status:`, response.status);
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`[API] PUT /progress/${courseId} - Error:`, errorText);
-      return {
-        success: false,
-        error: errorText || "Errore durante l'aggiornamento del progresso",
-      };
-    }
 
     console.log(`[API] PUT /progress/${courseId} - Progress updated successfully`);
     return { success: true };
@@ -874,28 +549,7 @@ export async function deleteCourseProgress(
   try {
     console.log(`[API] DELETE /progress/${courseId} - Deleting progress...`, { url });
 
-    const formData = new URLSearchParams();
-    formData.append("url", url);
-
-    const response = await fetch(`${API_BASE_URL}/progress/${courseId}`, {
-      method: "DELETE",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: formData.toString(),
-      credentials: "include",
-    });
-
-    console.log(`[API] DELETE /progress/${courseId} - Response status:`, response.status);
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`[API] DELETE /progress/${courseId} - Error:`, errorText);
-      return {
-        success: false,
-        error: errorText || "Errore durante l'eliminazione del progresso",
-      };
-    }
+    await deleteAuth(`${API_BASE_URL}/progress/${courseId}`, { url });
 
     console.log(`[API] DELETE /progress/${courseId} - Progress deleted successfully`);
     return { success: true };
